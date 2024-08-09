@@ -10,8 +10,7 @@ enum RenderMode {
 };
 
 namespace global {
-  constexpr uint8_t sphere_num = 3;
-  constexpr uint8_t sample_group_num = 50;
+  constexpr uint8_t sample_group_num = 25;
   constexpr uint8_t cmpeq = 0;
   constexpr uint8_t cmplt = 1;
   constexpr uint8_t cmple = 2;
@@ -21,7 +20,7 @@ namespace global {
   constexpr uint8_t shuf_all_first = 0;
   constexpr uint8_t shuf_all_second = 85;
   constexpr uint8_t shuf_all_third = 170;
-  constexpr uint8_t ray_depth = 20;
+  constexpr uint8_t ray_depth = 10;
   constexpr float float_max = FLT_MAX;
   constexpr uint16_t img_width = 1920;
   constexpr uint16_t img_height = 1080;

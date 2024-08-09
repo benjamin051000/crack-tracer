@@ -8,7 +8,7 @@
 
 static std::vector<Sphere> spheres;
 inline static void init_spheres() {
-  spheres.reserve(300);
+  spheres.reserve(488);
   spheres = {
       {{.center = {.x = -1.f, .y = 1.f, .z = -2.5f}, .mat = red_lambertian, .r = 1.f},
        {.center = {.x = 0.f, .y = 1.f, .z = 0.f}, .mat = glass, .r = 1.f},
@@ -49,8 +49,6 @@ inline static void init_spheres() {
       }
     }
   }
-
-  spheres.shrink_to_fit();
 }
 
 // Returns hit t values or 0 depending on if this ray hit this sphere or not
