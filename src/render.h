@@ -9,6 +9,8 @@
 #include <SDL2/SDL.h>
 #include <array>
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <future>
 #include <immintrin.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -24,12 +26,6 @@ constexpr Color_256 night = {
     .r = {0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02},
     .g = {0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08},
     .b = {0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35},
-};
-
-constexpr Color_256 white_256 = {
-    .r = global::white,
-    .g = global::white,
-    .b = global::white,
 };
 
 inline static void update_colors(Color_256* curr_colors, const Color_256* new_colors,
@@ -82,7 +78,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays, uint8_t depth) {
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
     if (_mm256_testz_ps(new_hit_mask, new_hit_mask)) {
-      update_colors(&colors, &white_256, no_hit_mask);
+      update_colors(&colors, &global::background_color, no_hit_mask);
       break;
     }
 
@@ -163,6 +159,7 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
 
   // SDL offsets our img pointer to a location that might not be aligned to 32 bytes.
   // Therefore we can't just stream from the registers to memory... :(
+  write_pos *= 3;
   if constexpr (global::active_render_mode == RenderMode::real_time) {
     alignas(32) CharColor char_buf[32];
     _mm256_store_si256(((__m256i*)char_buf), colors_1_u8);
@@ -185,8 +182,7 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
   }
 }
 
-inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pixel_count,
-                          uint32_t pix_offset) {
+inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pix_offset) {
   // comptime generated
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
@@ -201,37 +197,77 @@ inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pi
   Color_256 sample_color;
   alignas(32) Color color_buf[32];
 
-  uint32_t write_pos = (pix_offset / 32) * 3;
+  constexpr uint32_t write_chunk_size = global::img_width / 32;
   uint32_t row = pix_offset / global::img_width;
-  uint32_t col = pix_offset % global::img_width;
-  uint32_t end_row = (pix_offset + pixel_count - 1) / global::img_width;
-  uint32_t end_col = (pix_offset + pixel_count - 1) % global::img_width;
+  uint32_t write_pos = row * write_chunk_size;
   uint8_t color_buf_idx = 0;
   uint8_t sample_group;
+  constexpr int last_sample_num = global::sample_group_num - 1;
 
-  for (; row <= end_row; row++) {
-    while (col <= end_col) {
+  for (; row < global::img_height; row += global::thread_count) {
+    for (uint32_t col = 0; col < global::img_width; col++) {
       sample_color.r = _mm256_setzero_ps();
       sample_color.g = _mm256_setzero_ps();
       sample_color.b = _mm256_setzero_ps();
 
-      for (sample_group = 0; sample_group < global::sample_group_num; sample_group++) {
+      /*
+       * The code from here to the end of the conditional statement does this:
+       *
+       * In an attempt to not calculate N samples when the ray is just shooting
+       * into the background, I first calculate the bottom group of samples.
+       *
+       * if that bottom group shows that all rays are the same color as the background,
+       * I just skip looking through any more samples. If the bottom sample has any color
+       * besides the background color, I go through with calculating all the other samples.
+       * I skip the bottom sample in the main sample loop since this first check already finds it.
+       *
+       * I chose the bottom sample to just be more correct about whether the whole pixel is that
+       * color or not. since the background color is higher than the rest of the scene, choosing
+       * the lower sample is a better bet when deciding whether we're hitting an actual object.
+       */
 
-        RayCluster samples = base_rays;
-        float x_scale = global::pix_du * col;
-        float y_scale = (global::pix_dv * row) + (sample_group * global::sample_dv);
+      RayCluster samples = base_rays;
 
-        __m256 x_scale_vec = _mm256_broadcast_ss(&x_scale);
-        __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
+      float x_scale = global::pix_du * col;
+      __m256 x_scale_vec = _mm256_broadcast_ss(&x_scale);
+      samples.dir.x = _mm256_add_ps(samples.dir.x, x_scale_vec);
 
-        samples.dir.x = _mm256_add_ps(samples.dir.x, x_scale_vec);
-        samples.dir.y = _mm256_add_ps(samples.dir.y, y_scale_vec);
+      float y_scale = (global::pix_dv * row) + (last_sample_num * global::sample_dv);
+      __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
+      samples.dir.y = _mm256_add_ps(samples.dir.y, y_scale_vec);
 
-        Color_256 new_colors = ray_cluster_colors(&samples, 10);
+      Color_256 new_colors = ray_cluster_colors(&samples, 10);
 
+      __m256 not_background_r =
+          _mm256_cmp_ps(new_colors.r, global::background_color.r, global::cmpneq);
+      if (_mm256_testz_ps(not_background_r, not_background_r)) {
+        float sample_count_f32 = (float)global::sample_group_num;
+        __m256 sample_count_vec = _mm256_broadcast_ss(&sample_count_f32);
+        sample_color = {
+            .r = _mm256_mul_ps(global::background_color.r, sample_count_vec),
+            .g = _mm256_mul_ps(global::background_color.g, sample_count_vec),
+            .b = _mm256_mul_ps(global::background_color.b, sample_count_vec),
+        };
+      } else {
         sample_color.r = _mm256_add_ps(sample_color.r, new_colors.r);
         sample_color.g = _mm256_add_ps(sample_color.g, new_colors.g);
         sample_color.b = _mm256_add_ps(sample_color.b, new_colors.b);
+
+        for (sample_group = 0; sample_group < last_sample_num; sample_group++) {
+
+          samples = base_rays;
+          samples.dir.x = _mm256_add_ps(samples.dir.x, x_scale_vec);
+
+          y_scale = (global::pix_dv * row) + (sample_group * global::sample_dv);
+          y_scale_vec = _mm256_broadcast_ss(&y_scale);
+          samples.dir.y = _mm256_add_ps(samples.dir.y, y_scale_vec);
+
+          Color_256 new_colors = ray_cluster_colors(&samples, 10);
+
+          sample_color.r = _mm256_add_ps(sample_color.r, new_colors.r);
+          sample_color.g = _mm256_add_ps(sample_color.g, new_colors.g);
+          sample_color.b = _mm256_add_ps(sample_color.b, new_colors.b);
+        }
       }
       // accumulate all color channels into first float of vec
       sample_color.r = _mm256_hadd_ps(sample_color.r, sample_color.r);
@@ -251,18 +287,17 @@ inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pi
       _mm_store_ss(&color_buf[color_buf_idx].b, _mm256_castps256_ps128(sample_color.b));
 
       color_buf_idx++;
-      col++;
 
       if (color_buf_idx != 32) {
         continue;
       }
 
       write_out_color_buf(color_buf, img_buf, write_pos);
-      write_pos += 3;
+      write_pos++;
 
       color_buf_idx = 0;
     }
-    col = 0;
+    write_pos += ((global::thread_count - 1) * write_chunk_size);
   }
 }
 
@@ -276,14 +311,12 @@ inline static void render_png() {
       (CharColor*)aligned_alloc(32, global::img_width * global::img_height * sizeof(CharColor));
   init_spheres();
   std::array<std::future<void>, global::thread_count> futures;
-  constexpr uint32_t chunk_size = global::img_width * (global::img_height / global::thread_count);
   Camera cam;
 
   auto start_time = system_clock::now();
-
   for (size_t idx = 0; idx < global::thread_count; idx++) {
     futures[idx] =
-        std::async(std::launch::async, render, img_data, cam.origin, chunk_size, idx * chunk_size);
+        std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
   }
 
   for (size_t idx = 0; idx < global::thread_count; idx++) {
@@ -305,7 +338,6 @@ inline static void render_realtime() {
       (CharColor*)aligned_alloc(32, global::img_width * global::img_height * sizeof(CharColor));
   init_spheres();
   std::array<std::future<void>, global::thread_count> futures{};
-  constexpr uint32_t chunk_size = global::img_width * (global::img_height / global::thread_count);
   Camera cam;
 
   SDL_Window* win = NULL;
@@ -341,8 +373,8 @@ inline static void render_realtime() {
     SDL_LockTexture(buffer, NULL, (void**)(&img_data), &pitch);
 
     for (size_t idx = 0; idx < global::thread_count; idx++) {
-      futures[idx] = std::async(std::launch::async, render, img_data, cam.origin, chunk_size,
-                                idx * chunk_size);
+      futures[idx] =
+          std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
     }
 
     for (size_t idx = 0; idx < global::thread_count; idx++) {
