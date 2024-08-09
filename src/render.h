@@ -9,6 +9,7 @@
 #include <SDL2/SDL.h>
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <future>
 #include <immintrin.h>
@@ -158,6 +159,7 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
 
   // SDL offsets our img pointer to a location that might not be aligned to 32 bytes.
   // Therefore we can't just stream from the registers to memory... :(
+  write_pos *= 3;
   if constexpr (global::active_render_mode == RenderMode::real_time) {
     alignas(32) CharColor char_buf[32];
     _mm256_store_si256(((__m256i*)char_buf), colors_1_u8);
@@ -180,8 +182,7 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
   }
 }
 
-inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pixel_count,
-                          uint32_t pix_offset) {
+inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pix_offset) {
   // comptime generated
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
@@ -196,16 +197,14 @@ inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pi
   Color_256 sample_color;
   alignas(32) Color color_buf[32];
 
-  uint32_t write_pos = (pix_offset / 32) * 3;
+  constexpr uint32_t write_chunk_size = global::img_width / 32;
   uint32_t row = pix_offset / global::img_width;
-  uint32_t col = pix_offset % global::img_width;
-  uint32_t end_row = (pix_offset + pixel_count - 1) / global::img_width;
-  uint32_t end_col = (pix_offset + pixel_count - 1) % global::img_width;
+  uint32_t write_pos = row * write_chunk_size;
   uint8_t color_buf_idx = 0;
   uint8_t sample_group;
 
-  for (; row <= end_row; row++) {
-    while (col <= end_col) {
+  for (; row < global::img_height; row += global::thread_count) {
+    for (uint32_t col = 0; col < global::img_width; col++) {
       sample_color.r = _mm256_setzero_ps();
       sample_color.g = _mm256_setzero_ps();
       sample_color.b = _mm256_setzero_ps();
@@ -246,18 +245,17 @@ inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pi
       _mm_store_ss(&color_buf[color_buf_idx].b, _mm256_castps256_ps128(sample_color.b));
 
       color_buf_idx++;
-      col++;
 
       if (color_buf_idx != 32) {
         continue;
       }
 
       write_out_color_buf(color_buf, img_buf, write_pos);
-      write_pos += 3;
+      write_pos++;
 
       color_buf_idx = 0;
     }
-    col = 0;
+    write_pos += ((global::thread_count - 1) * write_chunk_size);
   }
 }
 
@@ -275,15 +273,13 @@ inline static void render_png() {
 
   auto start_time = system_clock::now();
 
-  for (int row = 0; row < global::img_height; row += global::thread_count) {
-    for (size_t idx = 0; idx < global::thread_count; idx++) {
-      futures[idx] = std::async(std::launch::async, render, img_data, cam.origin, global::img_width,
-                                (row + idx) * global::img_width);
-    }
+  for (size_t idx = 0; idx < global::thread_count; idx++) {
+    futures[idx] =
+        std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
+  }
 
-    for (size_t idx = 0; idx < global::thread_count; idx++) {
-      futures[idx].get();
-    }
+  for (size_t idx = 0; idx < global::thread_count; idx++) {
+    futures[idx].get();
   }
 
   auto end_time = system_clock::now();
@@ -335,15 +331,13 @@ inline static void render_realtime() {
 
     SDL_LockTexture(buffer, NULL, (void**)(&img_data), &pitch);
 
-    for (int row = 0; row < global::img_height; row += global::thread_count) {
-      for (size_t idx = 0; idx < global::thread_count; idx++) {
-        futures[idx] = std::async(std::launch::async, render, img_data, cam.origin,
-                                  global::img_width, (row + idx) * global::img_width);
-      }
+    for (size_t idx = 0; idx < global::thread_count; idx++) {
+      futures[idx] =
+          std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
+    }
 
-      for (size_t idx = 0; idx < global::thread_count; idx++) {
-        futures[idx].get();
-      }
+    for (size_t idx = 0; idx < global::thread_count; idx++) {
+      futures[idx].get();
     }
 
     SDL_UnlockTexture(buffer);
