@@ -21,11 +21,11 @@ public:
     __m256i scale_i32 = lcg_rand_256();
     __m256 scale = _mm256_cvtepi32_ps(scale_i32);
     __m256 rcp_rand_max_vec = _mm256_broadcast_ss(&rcp_rand_max);
-    scale = _mm256_mul_ps(scale, rcp_rand_max_vec);
+    scale *= rcp_rand_max_vec;
 
     __m256 min_vec = _mm256_broadcast_ss(&min);
     __m256 max_vec = _mm256_broadcast_ss(&max);
-    __m256 range = _mm256_sub_ps(max_vec, min_vec);
+    __m256 range = max_vec - min_vec;
 
     return _mm256_fmadd_ps(scale, range, min_vec);
   }

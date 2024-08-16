@@ -21,22 +21,10 @@ struct Vec3_256 {
   __m256 z;
 };
 
-struct Color {
-  float r;
-  float g;
-  float b;
-};
-
 struct CharColor {
   uint8_t r;
   uint8_t g;
   uint8_t b;
-};
-
-struct Color_256 {
-  __m256 r;
-  __m256 g;
-  __m256 b;
 };
 
 enum MatType {
@@ -45,11 +33,13 @@ enum MatType {
   dielectric,
 };
 
+using Color_256 = Vec3_256;
 struct Material_256 {
   Color_256 atten;
   __m256i type;
 };
 
+using Color = Vec3;
 struct alignas(16) Material {
   Color atten;
   MatType type;

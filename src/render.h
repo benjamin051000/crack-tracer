@@ -17,63 +17,44 @@
 #include <stb_image_write.h>
 
 constexpr Color_256 sky = {
-    .r = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f},
-    .g = {0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f},
-    .b = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f},
-};
-
-constexpr Color_256 night = {
-    .r = {0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02},
-    .g = {0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08},
-    .b = {0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35},
+    .x = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f},
+    .y = {0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f},
+    .z = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f},
 };
 
 inline static void update_colors(Color_256* curr_colors, const Color_256* new_colors,
                                  __m256 update_mask) {
 
-  // multiply current colors by the attenuation of new hits.
-  // fill 1.0 for no hits in order to preserve current colors when multiplying
-  __m256 r = _mm256_and_ps(new_colors->r, update_mask);
-  __m256 g = _mm256_and_ps(new_colors->g, update_mask);
-  __m256 b = _mm256_and_ps(new_colors->b, update_mask);
-
   __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, global::all_set);
   __m256 preserve_curr = _mm256_and_ps(global::white, new_no_hit_mask);
 
-  // 1.0 where no new hit occured and we want to preserve the prev color.
-  // new r,g,b values where a new hit occured and we want to scale prev color by
-  r = _mm256_add_ps(r, preserve_curr);
-  g = _mm256_add_ps(g, preserve_curr);
-  b = _mm256_add_ps(b, preserve_curr);
-
-  curr_colors->r = _mm256_mul_ps(curr_colors->r, r);
-  curr_colors->g = _mm256_mul_ps(curr_colors->g, g);
-  curr_colors->b = _mm256_mul_ps(curr_colors->b, b);
+  // multiply current colors by the attenuation of new hits.
+  // fill 1.0 for no hits in order to preserve current colors when multiplying
+  *curr_colors *= ((*new_colors & update_mask) + preserve_curr);
 }
 
 inline static Color_256 ray_cluster_colors(RayCluster* rays, uint8_t depth) {
-  const __m256 zeros = _mm256_setzero_ps();
   // will be used to add a sky tint to rays that at some point bounce off into space.
   // if a ray never bounces away (within amount of bounces set by depth), the
   // hit_mask will be all set (packed floats) and the sky tint will not affect its final color
-  __m256 no_hit_mask = zeros;
+  __m256 no_hit_mask = global::zeros;
 
   HitRecords hit_rec;
-  hit_rec.front_face = zeros;
+  hit_rec.front_face = global::zeros;
 
   Color_256 colors{
-      .r = global::white,
-      .g = global::white,
-      .b = global::white,
+      .x = global::white,
+      .y = global::white,
+      .z = global::white,
   };
 
   for (int i = 0; i < depth; i++) {
 
     find_sphere_hits(&hit_rec, rays, INFINITY);
 
-    // or a mask when a value is not a hit, at any point. if all are zero,
-    // break
-    __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, zeros, global::cmpnle);
+    // or a mask when a value is not a hit, at any point.
+    // if all are zero, break
+    __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, global::cmpnle);
     __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, global::all_set);
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
@@ -95,18 +76,18 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
                                        uint32_t write_pos) {
 
   __m256 cm = _mm256_broadcast_ss(&global::color_multiplier);
-  __m256 colors_1_f32 = _mm256_mul_ps(_mm256_load_ps((float*)color_buf), cm);
-  __m256 colors_2_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 8), cm);
-  __m256 colors_3_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 16), cm);
-  __m256 colors_4_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 24), cm);
-  __m256 colors_5_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 32), cm);
-  __m256 colors_6_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 40), cm);
-  __m256 colors_7_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 48), cm);
-  __m256 colors_8_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 56), cm);
-  __m256 colors_9_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 64), cm);
-  __m256 colors_10_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 72), cm);
-  __m256 colors_11_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 80), cm);
-  __m256 colors_12_f32 = _mm256_mul_ps(_mm256_load_ps((float*)(color_buf) + 88), cm);
+  __m256 colors_1_f32 = _mm256_load_ps((float*)color_buf) * cm;
+  __m256 colors_2_f32 = _mm256_load_ps((float*)(color_buf) + 8) * cm;
+  __m256 colors_3_f32 = _mm256_load_ps((float*)(color_buf) + 16) * cm;
+  __m256 colors_4_f32 = _mm256_load_ps((float*)(color_buf) + 24) * cm;
+  __m256 colors_5_f32 = _mm256_load_ps((float*)(color_buf) + 32) * cm;
+  __m256 colors_6_f32 = _mm256_load_ps((float*)(color_buf) + 40) * cm;
+  __m256 colors_7_f32 = _mm256_load_ps((float*)(color_buf) + 48) * cm;
+  __m256 colors_8_f32 = _mm256_load_ps((float*)(color_buf) + 56) * cm;
+  __m256 colors_9_f32 = _mm256_load_ps((float*)(color_buf) + 64) * cm;
+  __m256 colors_10_f32 = _mm256_load_ps((float*)(color_buf) + 72) * cm;
+  __m256 colors_11_f32 = _mm256_load_ps((float*)(color_buf) + 80) * cm;
+  __m256 colors_12_f32 = _mm256_load_ps((float*)(color_buf) + 88) * cm;
 
   __m256i colors_1_i32 = _mm256_cvtps_epi32(colors_1_f32);
   __m256i colors_2_i32 = _mm256_cvtps_epi32(colors_2_f32);
@@ -182,16 +163,12 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
   }
 }
 
-inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pix_offset) {
+inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
   // comptime generated
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
       .dir = base_dirs,
-      .orig = {.x = _mm256_broadcast_ss(&cam_origin.x),
-               .y = _mm256_broadcast_ss(&cam_origin.y),
-               .z = _mm256_broadcast_ss(&cam_origin.z)
-
-      },
+      .orig = broadcast_vec(&cam_origin),
   };
 
   Color_256 sample_color;
@@ -202,89 +179,46 @@ inline static void render(CharColor* img_buf, const Vec4 cam_origin, uint32_t pi
   uint32_t write_pos = row * write_chunk_size;
   uint8_t color_buf_idx = 0;
   uint8_t sample_group;
-  constexpr int last_sample_num = global::sample_group_num - 1;
+
+  static_assert(global::sample_group_num > 0,
+                "there must be at least one group of ray samples to calculate");
 
   for (; row < global::img_height; row += global::thread_count) {
     for (uint32_t col = 0; col < global::img_width; col++) {
-      sample_color.r = _mm256_setzero_ps();
-      sample_color.g = _mm256_setzero_ps();
-      sample_color.b = _mm256_setzero_ps();
+      sample_color.x = _mm256_setzero_ps();
+      sample_color.y = _mm256_setzero_ps();
+      sample_color.z = _mm256_setzero_ps();
 
-      /*
-       * The code from here to the end of the conditional statement does this:
-       *
-       * In an attempt to not calculate N samples when the ray is just shooting
-       * into the background, I first calculate the bottom group of samples.
-       *
-       * if that bottom group shows that all rays are the same color as the background,
-       * I just skip looking through any more samples. If the bottom sample has any color
-       * besides the background color, I go through with calculating all the other samples.
-       * I skip the bottom sample in the main sample loop since this first check already finds it.
-       *
-       * I chose the bottom sample to just be more correct about whether the whole pixel is that
-       * color or not. since the background color is higher than the rest of the scene, choosing
-       * the lower sample is a better bet when deciding whether we're hitting an actual object.
-       */
+      for (sample_group = 0; sample_group < global::sample_group_num; sample_group++) {
+        RayCluster samples = base_rays;
 
-      RayCluster samples = base_rays;
+        float x_scale = global::pix_du * col;
+        __m256 x_scale_vec = _mm256_broadcast_ss(&x_scale);
+        samples.dir.x = samples.dir.x + x_scale_vec;
 
-      float x_scale = global::pix_du * col;
-      __m256 x_scale_vec = _mm256_broadcast_ss(&x_scale);
-      samples.dir.x = _mm256_add_ps(samples.dir.x, x_scale_vec);
+        float y_scale = (global::pix_dv * row) + (sample_group * global::sample_dv);
+        __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
+        samples.dir.y += y_scale_vec;
 
-      float y_scale = (global::pix_dv * row) + (last_sample_num * global::sample_dv);
-      __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
-      samples.dir.y = _mm256_add_ps(samples.dir.y, y_scale_vec);
-
-      Color_256 new_colors = ray_cluster_colors(&samples, 10);
-
-      __m256 not_background_r =
-          _mm256_cmp_ps(new_colors.r, global::background_color.r, global::cmpneq);
-      if (_mm256_testz_ps(not_background_r, not_background_r)) {
-        float sample_count_f32 = (float)global::sample_group_num;
-        __m256 sample_count_vec = _mm256_broadcast_ss(&sample_count_f32);
-        sample_color = {
-            .r = _mm256_mul_ps(global::background_color.r, sample_count_vec),
-            .g = _mm256_mul_ps(global::background_color.g, sample_count_vec),
-            .b = _mm256_mul_ps(global::background_color.b, sample_count_vec),
-        };
-      } else {
-        sample_color.r = _mm256_add_ps(sample_color.r, new_colors.r);
-        sample_color.g = _mm256_add_ps(sample_color.g, new_colors.g);
-        sample_color.b = _mm256_add_ps(sample_color.b, new_colors.b);
-
-        for (sample_group = 0; sample_group < last_sample_num; sample_group++) {
-
-          samples = base_rays;
-          samples.dir.x = _mm256_add_ps(samples.dir.x, x_scale_vec);
-
-          y_scale = (global::pix_dv * row) + (sample_group * global::sample_dv);
-          y_scale_vec = _mm256_broadcast_ss(&y_scale);
-          samples.dir.y = _mm256_add_ps(samples.dir.y, y_scale_vec);
-
-          Color_256 new_colors = ray_cluster_colors(&samples, 10);
-
-          sample_color.r = _mm256_add_ps(sample_color.r, new_colors.r);
-          sample_color.g = _mm256_add_ps(sample_color.g, new_colors.g);
-          sample_color.b = _mm256_add_ps(sample_color.b, new_colors.b);
-        }
+        sample_color += ray_cluster_colors(&samples, 10);
       }
+
       // accumulate all color channels into first float of vec
-      sample_color.r = _mm256_hadd_ps(sample_color.r, sample_color.r);
-      sample_color.r = _mm256_hadd_ps(sample_color.r, sample_color.r);
-      sample_color.r = _mm256_hadd_ps(sample_color.r, sample_color.r);
+      sample_color.x = _mm256_hadd_ps(sample_color.x, sample_color.x);
+      sample_color.x = _mm256_hadd_ps(sample_color.x, sample_color.x);
+      sample_color.x = _mm256_hadd_ps(sample_color.x, sample_color.x);
 
-      sample_color.g = _mm256_hadd_ps(sample_color.g, sample_color.g);
-      sample_color.g = _mm256_hadd_ps(sample_color.g, sample_color.g);
-      sample_color.g = _mm256_hadd_ps(sample_color.g, sample_color.g);
+      sample_color.y = _mm256_hadd_ps(sample_color.y, sample_color.y);
+      sample_color.y = _mm256_hadd_ps(sample_color.y, sample_color.y);
+      sample_color.y = _mm256_hadd_ps(sample_color.y, sample_color.y);
 
-      sample_color.b = _mm256_hadd_ps(sample_color.b, sample_color.b);
-      sample_color.b = _mm256_hadd_ps(sample_color.b, sample_color.b);
-      sample_color.b = _mm256_hadd_ps(sample_color.b, sample_color.b);
+      sample_color.z = _mm256_hadd_ps(sample_color.z, sample_color.z);
+      sample_color.z = _mm256_hadd_ps(sample_color.z, sample_color.z);
+      sample_color.z = _mm256_hadd_ps(sample_color.z, sample_color.z);
 
-      _mm_store_ss(&color_buf[color_buf_idx].r, _mm256_castps256_ps128(sample_color.r));
-      _mm_store_ss(&color_buf[color_buf_idx].g, _mm256_castps256_ps128(sample_color.g));
-      _mm_store_ss(&color_buf[color_buf_idx].b, _mm256_castps256_ps128(sample_color.b));
+      _mm_store_ss(&color_buf[color_buf_idx].x, _mm256_castps256_ps128(sample_color.x));
+      _mm_store_ss(&color_buf[color_buf_idx].y, _mm256_castps256_ps128(sample_color.y));
+      _mm_store_ss(&color_buf[color_buf_idx].z, _mm256_castps256_ps128(sample_color.z));
 
       color_buf_idx++;
 
@@ -314,6 +248,7 @@ inline static void render_png() {
   Camera cam;
 
   auto start_time = system_clock::now();
+
   for (size_t idx = 0; idx < global::thread_count; idx++) {
     futures[idx] =
         std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
