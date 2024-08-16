@@ -13,7 +13,7 @@ inline static void init_spheres() {
       {{.center = {.x = -1.f, .y = 1.f, .z = -2.5f}, .mat = red_lambertian, .r = 1.f},
        {.center = {.x = 0.f, .y = 1.f, .z = 0.f}, .mat = glass, .r = 1.f},
        {.center = {.x = 1.f, .y = 1.f, .z = 2.5f}, .mat = copper_metallic, .r = 1.f},
-       {.center = {.x = 0.f, .y = -1000.f, .z = 0.f}, .mat = grey_lambertian, .r = 1000.f}},
+       {.center = {.x = 0.f, .y = -1000.f, .z = 0.f}, .mat = silver_lambertian, .r = 1000.f}},
   };
   LCGRand lcg_rand;
   for (int a = -11; a < 11; a++) {
@@ -27,18 +27,18 @@ inline static void init_spheres() {
       if (choose_mat < 0.3) {
         // diffuse
         Color albedo = {
-            .r = lcg_rand.rand_in_range(0, 1),
-            .g = lcg_rand.rand_in_range(0, 1),
-            .b = lcg_rand.rand_in_range(0, 1),
+            .x = lcg_rand.rand_in_range(0, 1),
+            .y = lcg_rand.rand_in_range(0, 1),
+            .z = lcg_rand.rand_in_range(0, 1),
         };
         Material new_mat = {.atten = albedo, .type = MatType::lambertian};
         spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2});
       } else if (choose_mat < 0.7) {
         // metal
         Color albedo = {
-            .r = lcg_rand.rand_in_range(0.5, 1),
-            .g = lcg_rand.rand_in_range(0.5, 1),
-            .b = lcg_rand.rand_in_range(0.5, 1),
+            .x = lcg_rand.rand_in_range(0.5, 1),
+            .y = lcg_rand.rand_in_range(0.5, 1),
+            .z = lcg_rand.rand_in_range(0.5, 1),
         };
         Material new_mat = {.atten = albedo, .type = MatType::metallic};
         spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2});
@@ -55,40 +55,22 @@ inline static void init_spheres() {
 [[nodiscard]] inline static __m256 sphere_hit(const RayCluster* rays, const Sphere* sphere,
                                               float t_max) {
 
-  __m256 sphere_center_x = _mm256_broadcast_ss(&sphere->center.x);
-  __m256 oc_x = _mm256_sub_ps(sphere_center_x, rays->orig.x);
-
-  __m256 sphere_center_y = _mm256_broadcast_ss(&sphere->center.y);
-  __m256 oc_y = _mm256_sub_ps(sphere_center_y, rays->orig.y);
-
-  __m256 sphere_center_z = _mm256_broadcast_ss(&sphere->center.z);
-  __m256 oc_z = _mm256_sub_ps(sphere_center_z, rays->orig.z);
-
+  Vec3_256 sphere_center = broadcast_vec(&sphere->center);
+  Vec3_256 oc = sphere_center - rays->orig;
   float rad_2 = sphere->r * sphere->r;
   __m256 rad_2_vec = _mm256_broadcast_ss(&rad_2);
 
-  __m256 a = _mm256_mul_ps(rays->dir.x, rays->dir.x);
-  a = _mm256_fmadd_ps(rays->dir.y, rays->dir.y, a);
-  a = _mm256_fmadd_ps(rays->dir.z, rays->dir.z, a);
+  __m256 a = dot(&rays->dir, &rays->dir);
+  __m256 b = dot(&rays->dir, &oc);
+  __m256 c = dot(&oc, &oc) - rad_2_vec;
 
-  __m256 b = _mm256_mul_ps(rays->dir.x, oc_x);
-  b = _mm256_fmadd_ps(rays->dir.y, oc_y, b);
-  b = _mm256_fmadd_ps(rays->dir.z, oc_z, b);
+  __m256 discrim = _mm256_fmsub_ps(b, b, a * c);
 
-  __m256 c = _mm256_mul_ps(oc_x, oc_x);
-  c = _mm256_fmadd_ps(oc_y, oc_y, c);
-  c = _mm256_fmadd_ps(oc_z, oc_z, c);
-  c = _mm256_sub_ps(c, rad_2_vec);
-
-  __m256 discrim = _mm256_mul_ps(a, c);
-  discrim = _mm256_fmsub_ps(b, b, discrim);
-
-  __m256 zeros = _mm256_setzero_ps();
-  __m256 hit_loc = _mm256_cmp_ps(discrim, zeros, global::cmpnlt);
+  __m256 hit_loc = _mm256_cmp_ps(discrim, global::zeros, global::cmpnlt);
   int no_hit = _mm256_testz_ps(hit_loc, hit_loc);
 
   if (no_hit) {
-    return zeros;
+    return global::zeros;
   }
 
   // mask out the discriminants and b where there aren't hits
@@ -96,11 +78,10 @@ inline static void init_spheres() {
   b = _mm256_and_ps(b, hit_loc);
 
   __m256 recip_sqrt_d = _mm256_rsqrt_ps(discrim);
-  __m256 sqrt_d = _mm256_mul_ps(recip_sqrt_d, discrim);
+  __m256 sqrt_d = recip_sqrt_d * discrim;
   __m256 recip_a = _mm256_rcp_ps(a);
 
-  __m256 root = _mm256_sub_ps(b, sqrt_d);
-  root = _mm256_mul_ps(root, recip_a);
+  __m256 root = (b - sqrt_d) * recip_a;
 
   // allow through roots within the max t value
   __m256 t_max_vec = _mm256_broadcast_ss(&t_max);
@@ -113,9 +94,10 @@ inline static void init_spheres() {
 }
 
 inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
-                                   Vec3_256* outward_norm) {
+                                   const Vec3_256* outward_norm) {
 
   hit_rec->norm = *outward_norm;
+  Vec3_256 inward_norm = -*outward_norm;
 
   __m256 ray_norm_dot = dot(&rays->dir, outward_norm);
   hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), global::cmplt);
@@ -124,17 +106,7 @@ inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
     return;
   }
 
-  __m256 invert = _mm256_sub_ps(_mm256_setzero_ps(), global::white);
-
-  Vec3_256 inward_norm = {
-      .x = _mm256_mul_ps(outward_norm->x, invert),
-      .y = _mm256_mul_ps(outward_norm->y, invert),
-      .z = _mm256_mul_ps(outward_norm->z, invert),
-  };
-
-  hit_rec->norm.x = _mm256_blendv_ps(hit_rec->norm.x, inward_norm.x, back_face);
-  hit_rec->norm.y = _mm256_blendv_ps(hit_rec->norm.y, inward_norm.y, back_face);
-  hit_rec->norm.z = _mm256_blendv_ps(hit_rec->norm.z, inward_norm.z, back_face);
+  hit_rec->norm = blend_vec256(&hit_rec->norm, &inward_norm, back_face);
 }
 
 inline static void create_hit_record(HitRecords* hit_rec, const RayCluster* rays,
@@ -142,32 +114,13 @@ inline static void create_hit_record(HitRecords* hit_rec, const RayCluster* rays
   hit_rec->t = t_vals;
   hit_rec->mat = sphere_cluster->mat;
 
-  __m256 dir_xt = _mm256_mul_ps(rays->dir.x, t_vals);
-  __m256 dir_yt = _mm256_mul_ps(rays->dir.y, t_vals);
-  __m256 dir_zt = _mm256_mul_ps(rays->dir.z, t_vals);
+  hit_rec->orig.x = _mm256_fmadd_ps(rays->dir.x, t_vals, rays->orig.x);
+  hit_rec->orig.y = _mm256_fmadd_ps(rays->dir.y, t_vals, rays->orig.y);
+  hit_rec->orig.z = _mm256_fmadd_ps(rays->dir.z, t_vals, rays->orig.z);
 
-  __m256 ray_orig_x = rays->orig.x;
-  __m256 ray_orig_y = rays->orig.y;
-  __m256 ray_orig_z = rays->orig.z;
-
-  hit_rec->orig.x = _mm256_add_ps(ray_orig_x, dir_xt);
-  hit_rec->orig.y = _mm256_add_ps(ray_orig_y, dir_yt);
-  hit_rec->orig.z = _mm256_add_ps(ray_orig_z, dir_zt);
-
-  Vec3_256 norm = {
-      .x = _mm256_sub_ps(hit_rec->orig.x, sphere_cluster->center.x),
-      .y = _mm256_sub_ps(hit_rec->orig.y, sphere_cluster->center.y),
-      .z = _mm256_sub_ps(hit_rec->orig.z, sphere_cluster->center.z),
-  };
-
-  __m256 recip_radius = _mm256_rcp_ps(sphere_cluster->r);
-
+  Vec3_256 norm = hit_rec->orig - sphere_cluster->center;
   // normalize
-  norm.x = _mm256_mul_ps(norm.x, recip_radius);
-  norm.y = _mm256_mul_ps(norm.y, recip_radius);
-  norm.z = _mm256_mul_ps(norm.z, recip_radius);
-
-  // hit_rec->norm = norm;
+  norm /= sphere_cluster->r;
 
   set_face_normal(rays, hit_rec, &norm);
 }
@@ -180,66 +133,60 @@ inline static void update_sphere_cluster(SphereCluster* curr_cluster, Sphere cur
     return;
   }
 
-  __m256 new_sphere_x = _mm256_broadcast_ss(&curr_sphere.center.x);
-  __m256 new_sphere_y = _mm256_broadcast_ss(&curr_sphere.center.y);
-  __m256 new_sphere_z = _mm256_broadcast_ss(&curr_sphere.center.z);
-  __m256 new_sphere_r = _mm256_broadcast_ss(&curr_sphere.r);
-  __m256 new_sphere_atten_r = _mm256_broadcast_ss(&curr_sphere.mat.atten.r);
-  __m256 new_sphere_atten_g = _mm256_broadcast_ss(&curr_sphere.mat.atten.g);
-  __m256 new_sphere_atten_b = _mm256_broadcast_ss(&curr_sphere.mat.atten.b);
-  __m256i new_sphere_mat_type = _mm256_set1_epi32(curr_sphere.mat.type);
+  SphereCluster new_spheres = {
+      .center = broadcast_vec(&curr_sphere.center),
+      .mat =
+          {
+              .atten = broadcast_vec(&curr_sphere.mat.atten),
+              .type = _mm256_set1_epi32(curr_sphere.mat.type),
+          },
+      .r = _mm256_broadcast_ss(&curr_sphere.r),
 
-  // preserve new sphere values where a new minimum was found
-  new_sphere_x = _mm256_and_ps(new_sphere_x, update_mask);
-  new_sphere_y = _mm256_and_ps(new_sphere_y, update_mask);
-  new_sphere_z = _mm256_and_ps(new_sphere_z, update_mask);
-  new_sphere_r = _mm256_and_ps(new_sphere_r, update_mask);
-  new_sphere_atten_r = _mm256_and_ps(new_sphere_atten_r, update_mask);
-  new_sphere_atten_g = _mm256_and_ps(new_sphere_atten_g, update_mask);
-  new_sphere_atten_b = _mm256_and_ps(new_sphere_atten_b, update_mask);
-  new_sphere_mat_type = _mm256_and_si256(new_sphere_mat_type, (__m256i)update_mask);
+  };
+
+  new_spheres.center &= update_mask;
+  new_spheres.mat.atten &= update_mask;
+  new_spheres.mat.type = _mm256_and_si256(new_spheres.mat.type, (__m256i)update_mask);
+  new_spheres.r = _mm256_and_ps(new_spheres.r, update_mask);
 
   // negation of update locations so we can preserve current values
   // while clearing bits where we will update
   __m256 preserve_curr = _mm256_xor_ps(update_mask, global::all_set);
 
-  __m256 curr_sphere_x = _mm256_and_ps(curr_cluster->center.x, preserve_curr);
-  __m256 curr_sphere_y = _mm256_and_ps(curr_cluster->center.y, preserve_curr);
-  __m256 curr_sphere_z = _mm256_and_ps(curr_cluster->center.z, preserve_curr);
-  __m256 curr_sphere_r = _mm256_and_ps(curr_cluster->r, preserve_curr);
-  __m256 curr_sphere_atten_r = _mm256_and_ps(curr_cluster->mat.atten.r, preserve_curr);
-  __m256 curr_sphere_atten_g = _mm256_and_ps(curr_cluster->mat.atten.g, preserve_curr);
-  __m256 curr_sphere_atten_b = _mm256_and_ps(curr_cluster->mat.atten.b, preserve_curr);
-  __m256i curr_sphere_mat_type = _mm256_and_si256(curr_cluster->mat.type, (__m256i)preserve_curr);
+  SphereCluster curr_spheres = {
+      .center = curr_cluster->center & preserve_curr,
+      .mat =
+          {
+              .atten = curr_cluster->mat.atten & preserve_curr,
+              .type = _mm256_and_si256(curr_cluster->mat.type, (__m256i)preserve_curr),
+          },
+      .r = _mm256_and_ps(curr_cluster->r, preserve_curr),
 
-  curr_cluster->center.x = _mm256_add_ps(new_sphere_x, curr_sphere_x);
-  curr_cluster->center.y = _mm256_add_ps(new_sphere_y, curr_sphere_y);
-  curr_cluster->center.z = _mm256_add_ps(new_sphere_z, curr_sphere_z);
-  curr_cluster->r = _mm256_add_ps(new_sphere_r, curr_sphere_r);
-  curr_cluster->mat.atten.r = _mm256_add_ps(new_sphere_atten_r, curr_sphere_atten_r);
-  curr_cluster->mat.atten.g = _mm256_add_ps(new_sphere_atten_g, curr_sphere_atten_g);
-  curr_cluster->mat.atten.b = _mm256_add_ps(new_sphere_atten_b, curr_sphere_atten_b);
-  curr_cluster->mat.type = _mm256_add_epi32(new_sphere_mat_type, curr_sphere_mat_type);
+  };
+
+  curr_cluster->center = new_spheres.center + curr_spheres.center;
+  curr_cluster->mat.atten = new_spheres.mat.atten + curr_spheres.mat.atten;
+  curr_cluster->mat.type = new_spheres.mat.type + curr_spheres.mat.type;
+  curr_cluster->r = new_spheres.r + curr_spheres.r;
 };
 
 inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays, float t_max) {
 
-  __m256 zeros = _mm256_setzero_ps();
   SphereCluster closest_spheres = {
       .center =
           {
-              .x = zeros,
-              .y = zeros,
-              .z = zeros,
+              .x = global::zeros,
+              .y = global::zeros,
+              .z = global::zeros,
           },
-      .r = zeros,
+      .r = global::zeros,
   };
 
   __m256 max = _mm256_broadcast_ss(&global::float_max);
 
   // find first sphere as a baseline
   __m256 lowest_t_vals = sphere_hit(rays, &spheres[0], t_max);
-  __m256 hit_loc = _mm256_cmp_ps(lowest_t_vals, zeros, global::cmpneq);
+  __m256 hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, global::cmpneq);
 
   update_sphere_cluster(&closest_spheres, spheres[0], hit_loc);
 
@@ -247,7 +194,7 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
     __m256 new_t_vals = sphere_hit(rays, &spheres[i], t_max);
 
     // don't update on instances of no hits (hit locations all zeros)
-    hit_loc = _mm256_cmp_ps(new_t_vals, zeros, global::cmpneq);
+    hit_loc = _mm256_cmp_ps(new_t_vals, global::zeros, global::cmpneq);
     if (_mm256_testz_ps(hit_loc, hit_loc)) {
       continue;
     }
@@ -259,7 +206,7 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
     new_t_vals = _mm256_or_ps(new_t_vals, max_mask);
 
     // replace 0's with max for current lowest too
-    __m256 curr_no_hit_loc = _mm256_cmp_ps(lowest_t_vals, zeros, global::cmpeq);
+    __m256 curr_no_hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, global::cmpeq);
     max_mask = _mm256_and_ps(curr_no_hit_loc, max);
     __m256 lowest_t_masked = _mm256_or_ps(lowest_t_vals, max_mask);
 
