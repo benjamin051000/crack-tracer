@@ -50,11 +50,6 @@ inline static void init_spheres() {
       }
     }
   }
-  // spheres.push_back({
-  //     .center = {.x = 0.f, .y = 0, .z = -2.f},
-  //     .mat = glass,
-  //     .r = 1.f,
-  // });
 }
 
 // Returns hit t values or 0 depending on if this ray hit this sphere or not
@@ -83,8 +78,7 @@ inline static void init_spheres() {
   discrim = _mm256_and_ps(discrim, hit_loc);
   b = _mm256_and_ps(b, hit_loc);
 
-  __m256 recip_sqrt_d = _mm256_rsqrt_ps(discrim);
-  __m256 sqrt_d = recip_sqrt_d * discrim;
+  __m256 sqrt_d = _mm256_sqrt_ps(discrim);
   __m256 recip_a = _mm256_rcp_ps(a);
 
   __m256 root = (b - sqrt_d) * recip_a;

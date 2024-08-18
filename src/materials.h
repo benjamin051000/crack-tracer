@@ -47,12 +47,28 @@ alignas(32) static const int dielectric_types[8] = {
 
 static LCGRand lcg_rand;
 inline static void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {
-  rays->dir = reflect(&rays->dir, &hit_rec->norm);
+  Vec3_256 reflected = reflect(&rays->dir, &hit_rec->norm);
+  normalize(&reflected);
+
+  __m256 dp = dot(&reflected, &hit_rec->norm);
+  __m256 greater_than_zero = _mm256_cmp_ps(dp, global::zeros, global::cmpnle);
+  rays->dir = reflected & greater_than_zero;
+};
+
+[[nodiscard]] inline static __m256 near_zero(const Vec3_256* vec) {
+  __m256 near_x = _mm256_cmp_ps(abs_256(vec->x), global::t_min_vec, global::cmplt);
+  __m256 near_y = _mm256_cmp_ps(abs_256(vec->y), global::t_min_vec, global::cmplt);
+  __m256 near_z = _mm256_cmp_ps(abs_256(vec->z), global::t_min_vec, global::cmplt);
+
+  return _mm256_and_ps(near_x, _mm256_and_ps(near_y, near_z));
 };
 
 inline static void scatter_lambertian(RayCluster* rays, const HitRecords* hit_rec) {
   Vec3_256 rand_vec = lcg_rand.random_unit_vec();
-  rays->dir = rand_vec + hit_rec->norm;
+  Vec3_256 scatter_dir = rand_vec + hit_rec->norm;
+
+  //  rays->dir = blend_vec256(&scatter_dir, &hit_rec->norm, near_zero(&scatter_dir));
+  rays->dir = scatter_dir;
 }
 
 [[nodiscard]] inline static __m256 reflectance(__m256 cos, __m256 ref_idx) {

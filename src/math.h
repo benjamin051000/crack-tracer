@@ -139,7 +139,11 @@ inline static Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
       2.f, 2.f, 2.f, 2.f, 2.f, 2.f, 2.f, 2.f,
   };
   return *ray_dir - *axis * dot(ray_dir, axis) * reflect_scale;
-  ;
+}
+
+[[nodiscard]] inline static __m256 abs_256(__m256 vec) {
+  __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
+  return _mm256_and_ps(vec, (__m256)sign_mask);
 }
 
 [[nodiscard]] inline static Vec3_256 refract(const Vec3_256* ray_dir, const Vec3_256* norm,
@@ -148,31 +152,26 @@ inline static Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
   Vec3_256 inverted_ray_dir = -*ray_dir;
   __m256 cos_theta = _mm256_min_ps(dot(&inverted_ray_dir, norm), global::white);
 
-  Vec3_256 r_out_perp = (*ray_dir + *norm * cos_theta) * ratio;
-
-  // {
-  //     .x = _mm256_fmadd_ps(cos_theta, norm->x, ray_dir->x),
-  //     .y = _mm256_fmadd_ps(cos_theta, norm->y, ray_dir->y),
-  //     .z = _mm256_fmadd_ps(cos_theta, norm->z, ray_dir->z),
-  // };
-  // r_out_perp *= ratio;
+  Vec3_256 r_out_perp = {
+      .x = _mm256_fmadd_ps(cos_theta, norm->x, ray_dir->x),
+      .y = _mm256_fmadd_ps(cos_theta, norm->y, ray_dir->y),
+      .z = _mm256_fmadd_ps(cos_theta, norm->z, ray_dir->z),
+  };
+  r_out_perp *= ratio;
 
   __m256 r_out_parallel_scale = global::white - dot(&r_out_perp, &r_out_perp);
 
-  // absolute value
-  __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
-  r_out_parallel_scale = _mm256_and_ps(r_out_parallel_scale, (__m256)sign_mask);
+  r_out_parallel_scale = abs_256(r_out_parallel_scale);
 
   // square then negate
-  // __m256 parallel_scale_rsqrt = _mm256_rsqrt_ps(r_out_parallel_scale);
-  // r_out_parallel_scale *= -parallel_scale_rsqrt;
+  __m256 parallel_scale_rsqrt = _mm256_rsqrt_ps(r_out_parallel_scale);
+  r_out_parallel_scale *= -parallel_scale_rsqrt;
 
-  Vec3_256 r_out_parallel = -(*norm * _mm256_sqrt_ps(r_out_parallel_scale));
-
-  return r_out_perp + r_out_parallel;
-  // ray_dir->x = _mm256_fmadd_ps(r_out_parallel_scale, norm->x, r_out_perp.x);
-  // ray_dir->y = _mm256_fmadd_ps(r_out_parallel_scale, norm->y, r_out_perp.y);
-  // ray_dir->z = _mm256_fmadd_ps(r_out_parallel_scale, norm->z, r_out_perp.z);
+  return Vec3_256{
+      .x = _mm256_fmadd_ps(r_out_parallel_scale, norm->x, r_out_perp.x),
+      .y = _mm256_fmadd_ps(r_out_parallel_scale, norm->y, r_out_perp.y),
+      .z = _mm256_fmadd_ps(r_out_parallel_scale, norm->z, r_out_perp.z),
+  };
 }
 
 inline static void normalize(Vec3_256* vec) {

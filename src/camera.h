@@ -7,8 +7,6 @@
 class Camera {
 public:
   Vec3 origin = {-1.2, 1, 5};
-  // Vec3 origin = {0, 0, 0.6};
-  // Vec3 origin = {0, 0, 1};
   void register_key_event(SDL_Event e) {
 
     uint32_t key = e.key.keysym.sym;
