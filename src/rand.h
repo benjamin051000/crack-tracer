@@ -1,7 +1,6 @@
 #pragma once
 #include "comptime.h"
 #include "math.h"
-#include <immintrin.h>
 
 class LCGRand {
 public:
@@ -32,9 +31,9 @@ public:
 
 private:
   static inline thread_local __m256i rseed_vec = comptime::init_rseed_arr();
-  static inline thread_local int rseed = 0;
-  const __m256i r_a = _mm256_set1_epi32((int)11035152453);
-  const __m256i r_b = _mm256_set1_epi32(12345);
+  static inline thread_local uint32_t rseed = 0;
+  const __m256i r_a = _mm256_set1_epi32((uint32_t)11035152453u);
+  const __m256i r_b = _mm256_set1_epi32(12345u);
   const __m256i rand_max_vec = _mm256_set1_epi32(RAND_MAX);
   static constexpr float rcp_rand_max = 1.f / RAND_MAX;
 
@@ -59,5 +58,5 @@ private:
   };
 
   // scalar versions of rand generation
-  [[nodiscard]] inline int lcg_rand() { return rseed = (rseed * 11035152453 + 12345) & RAND_MAX; }
+  [[nodiscard]] inline int lcg_rand() { return rseed = (rseed * 1103515245u + 12345u) & RAND_MAX; }
 };

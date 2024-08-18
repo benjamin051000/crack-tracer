@@ -108,65 +108,22 @@ void test_normalize() {
   printf("\n");
 }
 
-void test_image_write() {
-  printf("TESTING IMAGE_WRITE\n");
-
-  uint16_t row, col;
-  uint32_t write_pos;
-  Color final_color = {
-      .r = 255.f,
-      .g = 0.f,
-      .b = 255.f,
-  };
-
-  CharColor char_color;
-  CharColor* data = (CharColor*)malloc((IMG_WIDTH * IMG_HEIGHT) * 3);
-
-  for (row = 0; row < IMG_HEIGHT; row++) {
-    for (col = 0; col < IMG_WIDTH; col++) {
-      write_pos = col + row * IMG_WIDTH;
-
-      char_color.r = final_color.r;
-      char_color.g = final_color.g;
-      char_color.b = final_color.b;
-      data[write_pos] = char_color;
-    }
-  }
-
-  // stbi_write_png("test.png", IMG_WIDTH, IMG_HEIGHT, 3, data, IMG_WIDTH * 3);
-  printf("\n");
-}
-
-void test_render() {
-  printf("TESTING RENDER\n");
-  CharColor* img_data = (CharColor*)aligned_alloc(32, IMG_WIDTH * IMG_HEIGHT * sizeof(CharColor));
-  render(img_data, Vec4{0, 0, 0, 0}, (IMG_WIDTH * IMG_HEIGHT) / 2, IMG_WIDTH * (IMG_HEIGHT / 2));
-  stbi_write_png("out.png", IMG_WIDTH, IMG_HEIGHT, 3, img_data, IMG_WIDTH * sizeof(CharColor));
-  printf("\n");
-}
-
-void test_rand() {
-  printf("TESTING RAND\n");
-  for (int i = 0; i < 10; i++) {
-
-    Vec3_256 rand_vec = rand_vec_in_cube();
-
-    print_vec_256(rand_vec.x);
-    print_vec_256(rand_vec.y);
-    print_vec_256(rand_vec.z);
-    printf("\n");
-  }
-
+void test_refract() {
+  printf("TESTING NORMALIZE\n");
+  Vec3 ray_dir = {0.0014, 0.2775, -10};
+  Vec3_256 ray_dir_vec = broadcast_vec(&ray_dir);
+  Vec3 norm = {0.003, 0.6133, 0.790};
+  Vec3_256 norm_vec = broadcast_vec(&norm);
+  Vec3_256 refracted = refract(&ray_dir_vec, &norm_vec, global::rcp_ir_vec);
   printf("\n");
 }
 
 int main() {
-  test_sphere_hit();
-  test_update_sphere_cluster();
-  test_reflect();
-  test_dot();
-  test_normalize();
-  test_image_write();
-  test_rand();
+  // test_sphere_hit();
+  // test_update_sphere_cluster();
+  // test_reflect();
+  // test_dot();
+  // test_normalize();
+  test_refract();
   return 0;
 }

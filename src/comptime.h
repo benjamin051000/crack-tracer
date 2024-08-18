@@ -36,7 +36,7 @@ namespace comptime {
     return init_dirs;
   }
   consteval __m256i init_rseed_arr() {
-    int rseed_arr[8];
+    uint32_t rseed_arr[8];
     rseed_arr[0] = 0;
     for (size_t i = 1; i < 8; i++) {
       rseed_arr[i] = (rseed_arr[i - 1] * 11035152453u + 12345u) & RAND_MAX;

@@ -3,6 +3,7 @@
 #include "math.h"
 #include "rand.h"
 #include "types.h"
+#include <cmath>
 #include <cstdlib>
 #include <immintrin.h>
 
@@ -46,7 +47,7 @@ alignas(32) static const int dielectric_types[8] = {
 
 static LCGRand lcg_rand;
 inline static void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {
-  reflect(&rays->dir, &hit_rec->norm);
+  rays->dir = reflect(&rays->dir, &hit_rec->norm);
 };
 
 inline static void scatter_lambertian(RayCluster* rays, const HitRecords* hit_rec) {
@@ -73,39 +74,35 @@ inline static void scatter_lambertian(RayCluster* rays, const HitRecords* hit_re
 }
 
 inline static void scatter_dielectric(RayCluster* rays, const HitRecords* hit_rec) {
-  __m256 refraction_ratio =
-      _mm256_blendv_ps(global::ir_vec, global::rcp_ir_vec, hit_rec->front_face);
 
+  __m256 ri = _mm256_blendv_ps(global::ir_vec, global::rcp_ir_vec, hit_rec->front_face);
   Vec3_256 unit_dir = rays->dir;
   normalize(&unit_dir);
-  unit_dir = -unit_dir;
 
-  __m256 cos_theta = dot(&unit_dir, &hit_rec->norm);
+  Vec3_256 inverse_unit_dir = -unit_dir;
+
+  __m256 cos_theta = dot(&inverse_unit_dir, &hit_rec->norm);
   cos_theta = _mm256_min_ps(cos_theta, global::white);
 
-  __m256 sin_theta = cos_theta * cos_theta;
-  sin_theta = global::white - sin_theta;
-  sin_theta = _mm256_sqrt_ps(sin_theta);
+  __m256 sin_theta = _mm256_sqrt_ps(global::white - cos_theta * cos_theta);
 
-  __m256 can_refract = refraction_ratio * sin_theta;
+  __m256 can_refract = ri * sin_theta;
   can_refract = _mm256_cmp_ps(can_refract, global::white, global::cmple);
 
-  __m256 ref = reflectance(cos_theta, refraction_ratio);
-  __m256 rand_vec = lcg_rand.rand_in_range_256(0.2f, 1.f);
+  __m256 ref = reflectance(cos_theta, ri);
+  __m256 rand_vec = lcg_rand.rand_in_range_256(0.f, 1.f);
   __m256 low_reflectance_loc = _mm256_cmp_ps(ref, rand_vec, global::cmple);
   __m256 refraction_loc = _mm256_and_ps(can_refract, low_reflectance_loc);
   __m256 reflection_loc = _mm256_xor_ps(refraction_loc, global::all_set);
 
   if (!_mm256_testz_ps(refraction_loc, refraction_loc)) {
-    Vec3_256 refract_dir = rays->dir;
-    refract(&refract_dir, &hit_rec->norm, refraction_ratio);
-
+    Vec3_256 refract_dir = refract(&unit_dir, &hit_rec->norm, ri);
     rays->dir = blend_vec256(&rays->dir, &refract_dir, refraction_loc);
   }
   if (!_mm256_testz_ps(reflection_loc, reflection_loc)) {
-    Vec3_256 reflect_dir = rays->dir;
-    reflect(&reflect_dir, &hit_rec->norm);
+    Vec3_256 reflect_dir = reflect(&unit_dir, &hit_rec->norm);
 
+    reflection_loc = _mm256_and_ps(reflection_loc, hit_rec->front_face);
     rays->dir = blend_vec256(&rays->dir, &reflect_dir, reflection_loc);
   }
 }

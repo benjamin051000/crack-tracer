@@ -6,6 +6,7 @@
 #include "math.h"
 #include "sphere.h"
 #include "types.h"
+#include "utils.h"
 #include <SDL2/SDL.h>
 #include <array>
 #include <chrono>
@@ -33,7 +34,7 @@ inline static void update_colors(Color_256* curr_colors, const Color_256* new_co
   *curr_colors *= ((*new_colors & update_mask) + preserve_curr);
 }
 
-inline static Color_256 ray_cluster_colors(RayCluster* rays, uint8_t depth) {
+inline static Color_256 ray_cluster_colors(RayCluster* rays) {
   // will be used to add a sky tint to rays that at some point bounce off into space.
   // if a ray never bounces away (within amount of bounces set by depth), the
   // hit_mask will be all set (packed floats) and the sky tint will not affect its final color
@@ -48,7 +49,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays, uint8_t depth) {
       .z = global::white,
   };
 
-  for (int i = 0; i < depth; i++) {
+  for (int i = 0; i < global::ray_depth; i++) {
 
     find_sphere_hits(&hit_rec, rays, INFINITY);
 
@@ -177,8 +178,8 @@ inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pi
   constexpr uint32_t write_chunk_size = global::img_width / 32;
   uint32_t row = pix_offset / global::img_width;
   uint32_t write_pos = row * write_chunk_size;
-  uint8_t color_buf_idx = 0;
-  uint8_t sample_group;
+  uint16_t color_buf_idx = 0;
+  uint16_t sample_group;
 
   static_assert(global::sample_group_num > 0,
                 "there must be at least one group of ray samples to calculate");
@@ -200,7 +201,7 @@ inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pi
         __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
         samples.dir.y += y_scale_vec;
 
-        sample_color += ray_cluster_colors(&samples, 10);
+        sample_color += ray_cluster_colors(&samples);
       }
 
       // accumulate all color channels into first float of vec

@@ -3,6 +3,7 @@
 #include "math.h"
 #include "rand.h"
 #include "types.h"
+#include <cstdlib>
 #include <immintrin.h>
 #include <vector>
 
@@ -49,6 +50,11 @@ inline static void init_spheres() {
       }
     }
   }
+  // spheres.push_back({
+  //     .center = {.x = 0.f, .y = 0, .z = -2.f},
+  //     .mat = glass,
+  //     .r = 1.f,
+  // });
 }
 
 // Returns hit t values or 0 depending on if this ray hit this sphere or not
@@ -88,6 +94,16 @@ inline static void init_spheres() {
   __m256 below_max = _mm256_cmp_ps(root, t_max_vec, global::cmplt);
   __m256 above_min = _mm256_cmp_ps(root, global::t_min_vec, global::cmpnlt);
   hit_loc = _mm256_and_ps(above_min, below_max);
+
+  // Only clear materials can have another root thats worth finding.
+  // This is why i only check for the farther out hit value if the material
+  // is dielectric.
+  if (_mm256_testz_ps(hit_loc, hit_loc) && sphere->mat.type == dielectric) {
+    root = (b + sqrt_d) * recip_a;
+    below_max = _mm256_cmp_ps(root, t_max_vec, global::cmplt);
+    above_min = _mm256_cmp_ps(root, global::t_min_vec, global::cmpnlt);
+    hit_loc = _mm256_and_ps(above_min, below_max);
+  }
   root = _mm256_and_ps(root, hit_loc);
 
   return root;
@@ -95,18 +111,10 @@ inline static void init_spheres() {
 
 inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
                                    const Vec3_256* outward_norm) {
-
-  hit_rec->norm = *outward_norm;
-  Vec3_256 inward_norm = -*outward_norm;
-
   __m256 ray_norm_dot = dot(&rays->dir, outward_norm);
   hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), global::cmplt);
-  __m256 back_face = _mm256_xor_ps(hit_rec->front_face, global::all_set);
-  if (_mm256_testz_ps(back_face, back_face)) {
-    return;
-  }
-
-  hit_rec->norm = blend_vec256(&hit_rec->norm, &inward_norm, back_face);
+  hit_rec->norm = -*outward_norm;
+  hit_rec->norm = blend_vec256(&hit_rec->norm, outward_norm, hit_rec->front_face);
 }
 
 inline static void create_hit_record(HitRecords* hit_rec, const RayCluster* rays,
