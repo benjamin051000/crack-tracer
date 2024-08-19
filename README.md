@@ -1,15 +1,8 @@
 # crack-tracer
-Ray tracer using no GPU acceleration to see how far we can push the limits
+Ray tracer using no GPU acceleration to see how far we can push the limits.\
+\
+Basically me throwing tons of SIMD and cores at the problem
 
-### reference image below: 
-- **~118 ms** render time
-- 80 ray samples per pixel
-- 1080p (2,073,600 total pixels)
-- ray bounce depth of 10
-- Intel i5-13400f
+![2400_samples](https://github.com/user-attachments/assets/bd71bab7-e520-455d-b5fd-5971e31e7c43)
 
-
-![out](https://github.com/user-attachments/assets/8bdb60e1-8855-4d2f-8030-96533735087c)
-
-### stars!
-![stars](https://github.com/user-attachments/assets/d4e12cbe-ab75-4583-b63a-dbe038a7eb28)
+![bright_stars_1600](https://github.com/user-attachments/assets/5fe74016-5f4b-4b0a-a72f-6bd36b222cf0)
