@@ -1,13 +1,9 @@
-#pragma once
-#include "globals.h"
-#include "types.h"
-#include <cstdint>
-#include <cstdio>
-#include <immintrin.h>
+#include "math.hpp"
+#include "globals.hpp"
 
 // OPERATORS
 
-inline static Vec3_256 operator+(const Vec3_256& a, const Vec3_256& b) {
+ Vec3_256 operator+(const Vec3_256& a, const Vec3_256& b) {
   return Vec3_256{
       .x = _mm256_add_ps(a.x, b.x),
       .y = _mm256_add_ps(a.y, b.y),
@@ -15,7 +11,7 @@ inline static Vec3_256 operator+(const Vec3_256& a, const Vec3_256& b) {
   };
 }
 
-inline static Vec3_256 operator+(const Vec3_256& a, const __m256& b) {
+ Vec3_256 operator+(const Vec3_256& a, const __m256& b) {
   return Vec3_256{
       .x = _mm256_add_ps(a.x, b),
       .y = _mm256_add_ps(a.y, b),
@@ -23,14 +19,14 @@ inline static Vec3_256 operator+(const Vec3_256& a, const __m256& b) {
   };
 }
 
-inline static Vec3_256& operator+=(Vec3_256& a, const Vec3_256& b) {
+ Vec3_256& operator+=(Vec3_256& a, const Vec3_256& b) {
   a.x = _mm256_add_ps(a.x, b.x);
   a.y = _mm256_add_ps(a.y, b.y);
   a.z = _mm256_add_ps(a.z, b.z);
   return a;
 }
 
-inline static Vec3_256 operator-(const Vec3_256& a, const Vec3_256& b) {
+ Vec3_256 operator-(const Vec3_256& a, const Vec3_256& b) {
   return Vec3_256{
       .x = _mm256_sub_ps(a.x, b.x),
       .y = _mm256_sub_ps(a.y, b.y),
@@ -38,7 +34,7 @@ inline static Vec3_256 operator-(const Vec3_256& a, const Vec3_256& b) {
   };
 }
 
-inline static Vec3_256& operator-=(Vec3_256& a, const Vec3_256& b) {
+ Vec3_256& operator-=(Vec3_256& a, const Vec3_256& b) {
   a.x = _mm256_sub_ps(a.x, b.x);
   a.y = _mm256_sub_ps(a.y, b.y);
   a.z = _mm256_sub_ps(a.z, b.z);
@@ -46,7 +42,7 @@ inline static Vec3_256& operator-=(Vec3_256& a, const Vec3_256& b) {
 }
 
 // inverse
-inline static Vec3_256 operator-(const Vec3_256& a) {
+ Vec3_256 operator-(const Vec3_256& a) {
   // -1
   __m256 invert = _mm256_sub_ps(_mm256_setzero_ps(), global::white);
   return Vec3_256{
@@ -56,7 +52,7 @@ inline static Vec3_256 operator-(const Vec3_256& a) {
   };
 }
 
-inline static Vec3_256 operator*(const Vec3_256& a, const Vec3_256& b) {
+ Vec3_256 operator*(const Vec3_256& a, const Vec3_256& b) {
   return Vec3_256{
       .x = _mm256_mul_ps(a.x, b.x),
       .y = _mm256_mul_ps(a.y, b.y),
@@ -64,7 +60,7 @@ inline static Vec3_256 operator*(const Vec3_256& a, const Vec3_256& b) {
   };
 }
 
-inline static Vec3_256 operator*(const Vec3_256& a, const __m256& b) {
+ Vec3_256 operator*(const Vec3_256& a, const __m256& b) {
   return Vec3_256{
       .x = _mm256_mul_ps(a.x, b),
       .y = _mm256_mul_ps(a.y, b),
@@ -72,21 +68,21 @@ inline static Vec3_256 operator*(const Vec3_256& a, const __m256& b) {
   };
 }
 
-inline static Vec3_256& operator*=(Vec3_256& a, const Vec3_256& b) {
+ Vec3_256& operator*=(Vec3_256& a, const Vec3_256& b) {
   a.x = _mm256_mul_ps(a.x, b.x);
   a.y = _mm256_mul_ps(a.y, b.y);
   a.z = _mm256_mul_ps(a.z, b.z);
   return a;
 }
 
-inline static Vec3_256& operator*=(Vec3_256& a, const __m256& b) {
+ Vec3_256& operator*=(Vec3_256& a, const __m256& b) {
   a.x = _mm256_mul_ps(a.x, b);
   a.y = _mm256_mul_ps(a.y, b);
   a.z = _mm256_mul_ps(a.z, b);
   return a;
 }
 
-inline static Vec3_256 operator/(const Vec3_256& a, const Vec3_256& b) {
+ Vec3_256 operator/(const Vec3_256& a, const Vec3_256& b) {
 
   Vec3_256 rcp_b = {
       .x = _mm256_rcp_ps(b.x),
@@ -101,7 +97,7 @@ inline static Vec3_256 operator/(const Vec3_256& a, const Vec3_256& b) {
   };
 }
 
-inline static Vec3_256& operator/=(Vec3_256& a, const __m256& b) {
+ Vec3_256& operator/=(Vec3_256& a, const __m256& b) {
 
   __m256 rcp_b = _mm256_rcp_ps(b);
 
@@ -111,7 +107,7 @@ inline static Vec3_256& operator/=(Vec3_256& a, const __m256& b) {
   return a;
 }
 
-inline static Vec3_256 operator&(const Vec3_256& a, const __m256& b) {
+ Vec3_256 operator&(const Vec3_256& a, const __m256& b) {
   return Vec3_256{
       .x = _mm256_and_ps(a.x, b),
       .y = _mm256_and_ps(a.y, b),
@@ -119,14 +115,14 @@ inline static Vec3_256 operator&(const Vec3_256& a, const __m256& b) {
   };
 }
 
-inline static Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
+ Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
   a.x = _mm256_and_ps(a.x, b);
   a.y = _mm256_and_ps(a.y, b);
   a.z = _mm256_and_ps(a.z, b);
   return a;
 }
 
-[[nodiscard]] inline static __m256 dot(const Vec3_256* a, const Vec3_256* b) {
+[[nodiscard]]  __m256 dot(const Vec3_256* a, const Vec3_256* b) {
   __m256 dot = _mm256_mul_ps(a->x, b->x);
   dot = _mm256_fmadd_ps(a->y, b->y, dot);
   return _mm256_fmadd_ps(a->z, b->z, dot);
@@ -134,19 +130,19 @@ inline static Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
 
 // reflect a ray about the axis
 // v = v - 2*dot(v,n)*n;
-[[nodiscard]] inline static Vec3_256 reflect(const Vec3_256* ray_dir, const Vec3_256* axis) {
+[[nodiscard]]  Vec3_256 reflect(const Vec3_256* ray_dir, const Vec3_256* axis) {
   constexpr __m256 reflect_scale = {
       2.f, 2.f, 2.f, 2.f, 2.f, 2.f, 2.f, 2.f,
   };
   return *ray_dir - *axis * dot(ray_dir, axis) * reflect_scale;
 }
 
-[[nodiscard]] inline static __m256 abs_256(__m256 vec) {
+[[nodiscard]]  __m256 abs_256(__m256 vec) {
   __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
   return _mm256_and_ps(vec, (__m256)sign_mask);
 }
 
-[[nodiscard]] inline static Vec3_256 refract(const Vec3_256* ray_dir, const Vec3_256* norm,
+[[nodiscard]]  Vec3_256 refract(const Vec3_256* ray_dir, const Vec3_256* norm,
                                              __m256 ratio) {
 
   Vec3_256 inverted_ray_dir = -*ray_dir;
@@ -174,14 +170,14 @@ inline static Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
   };
 }
 
-inline static void normalize(Vec3_256* vec) {
+ void normalize(Vec3_256* vec) {
   __m256 vec_len_2 = dot(vec, vec);
   __m256 recip_len = _mm256_rsqrt_ps(vec_len_2);
 
   *vec *= recip_len;
 }
 
-inline static Vec3_256 broadcast_vec(const Vec3* vec) {
+ Vec3_256 broadcast_vec(const Vec3* vec) {
   return Vec3_256{
       .x = _mm256_broadcast_ss(&vec->x),
       .y = _mm256_broadcast_ss(&vec->y),
@@ -189,7 +185,7 @@ inline static Vec3_256 broadcast_vec(const Vec3* vec) {
   };
 }
 
-inline static Vec3_256 blend_vec256(const Vec3_256* a, const Vec3_256* b, __m256 mask) {
+ Vec3_256 blend_vec256(const Vec3_256* a, const Vec3_256* b, __m256 mask) {
   return Vec3_256{
       .x = _mm256_blendv_ps(a->x, b->x, mask),
       .y = _mm256_blendv_ps(a->y, b->y, mask),
@@ -197,7 +193,7 @@ inline static Vec3_256 blend_vec256(const Vec3_256* a, const Vec3_256* b, __m256
   };
 }
 
-inline static uint32_t f_to_i(float f_val) {
+ uint32_t f_to_i(float f_val) {
   f_val += 1 << 23;
   return ((uint32_t)f_val) & 0x007FFFFF;
 }
