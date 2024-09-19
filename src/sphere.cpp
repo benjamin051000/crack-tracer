@@ -1,14 +1,9 @@
-#pragma once
-#include "materials.h"
-#include "math.h"
-#include "rand.h"
-#include "types.h"
-#include <cstdlib>
-#include <immintrin.h>
+#include "sphere.hpp"
+#include "globals.hpp"
 #include <vector>
 
 static std::vector<Sphere> spheres;
-inline static void init_spheres() {
+void init_spheres() {
   spheres.reserve(488);
   spheres = {
       {{.center = {.x = -1.f, .y = 1.f, .z = -2.5f}, .mat = red_lambertian, .r = 1.f},
@@ -53,7 +48,7 @@ inline static void init_spheres() {
 }
 
 // Returns hit t values or 0 depending on if this ray hit this sphere or not
-[[nodiscard]] inline static __m256 sphere_hit(const RayCluster* rays, const Sphere* sphere,
+[[nodiscard]]  __m256 sphere_hit(const RayCluster* rays, const Sphere* sphere,
                                               float t_max) {
 
   Vec3_256 sphere_center = broadcast_vec(&sphere->center);
@@ -103,7 +98,7 @@ inline static void init_spheres() {
   return root;
 }
 
-inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
+ void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
                                    const Vec3_256* outward_norm) {
   __m256 ray_norm_dot = dot(&rays->dir, outward_norm);
   hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), global::cmplt);
@@ -111,7 +106,7 @@ inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
   hit_rec->norm = blend_vec256(&hit_rec->norm, outward_norm, hit_rec->front_face);
 }
 
-inline static void create_hit_record(HitRecords* hit_rec, const RayCluster* rays,
+ void create_hit_record(HitRecords* hit_rec, const RayCluster* rays,
                                      SphereCluster* sphere_cluster, __m256 t_vals) {
   hit_rec->t = t_vals;
   hit_rec->mat = sphere_cluster->mat;
@@ -128,7 +123,7 @@ inline static void create_hit_record(HitRecords* hit_rec, const RayCluster* rays
 }
 
 // updates a sphere cluster with a sphere given a mask of where to insert the new sphere's values
-inline static void update_sphere_cluster(SphereCluster* curr_cluster, Sphere curr_sphere,
+ void update_sphere_cluster(SphereCluster* curr_cluster, Sphere curr_sphere,
                                          __m256 update_mask) {
 
   if (_mm256_testz_ps(update_mask, update_mask)) {
@@ -172,7 +167,7 @@ inline static void update_sphere_cluster(SphereCluster* curr_cluster, Sphere cur
   curr_cluster->r = new_spheres.r + curr_spheres.r;
 };
 
-inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays, float t_max) {
+ void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays, float t_max) {
 
   SphereCluster closest_spheres = {
       .center =
