@@ -20,4 +20,4 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RELEASE>:-Ofast;-g;-fn
 find_package(SDL2 REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main)
 
-target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE thirdparty/stb_image_write)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE third_party/stb_image_write)
