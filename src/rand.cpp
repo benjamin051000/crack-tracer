@@ -48,4 +48,7 @@
   };
 
   // scalar versions of rand generation
-  [[nodiscard]] int LCGRand::lcg_rand() { return rseed = (rseed * 1103515245u + 12345u) & RAND_MAX; }
+  [[nodiscard]] int LCGRand::lcg_rand() { 
+	rseed = (rseed * 1103515245u + 12345u) & RAND_MAX;
+	return rseed;
+}
