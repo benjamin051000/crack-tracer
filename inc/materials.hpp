@@ -1,6 +1,5 @@
 #pragma once
-#include "math.h"
-#include "rand.h"
+#include "rand.hpp"
 #include "types.hpp"
 #include <cmath>
 #include <cstdlib>
