@@ -58,3 +58,5 @@ out/
 asm_output.s
 # A clangd thing
 .cache/
+# cmake artifacts
+build/
