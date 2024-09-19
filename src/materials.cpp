@@ -1,52 +1,7 @@
-#pragma once
-#include "globals.h"
-#include "math.h"
-#include "rand.h"
-#include "types.h"
-#include <cmath>
-#include <cstdlib>
-#include <immintrin.h>
-
-constexpr Color silver = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
-constexpr Color grey = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
-constexpr Color white = {.x = 1.f, .y = 1.f, .z = 1.f};
-constexpr Color red = {.x = 0.90f, .y = 0.20f, .z = 0.20f};
-constexpr Color gold = {.x = 0.90f, .y = 0.75f, .z = 0.54f};
-constexpr Color copper = {.x = 0.59f, .y = 0.34f, .z = 0.29f};
-constexpr Color green = {.x = 0.f, .y = 1.f, .z = 0.f};
-constexpr Color moon = {.x = 100.f, .y = 100.f, .z = 100.f};
-
-constexpr Material silver_metallic = {.atten = silver, .type = MatType::metallic};
-constexpr Material red_metallic = {.atten = red, .type = MatType::metallic};
-constexpr Material gold_metallic = {.atten = gold, .type = MatType::metallic};
-constexpr Material copper_metallic = {.atten = copper, .type = MatType::metallic};
-constexpr Material green_metallic = {.atten = green, .type = MatType::metallic};
-
-constexpr Material silver_lambertian = {.atten = silver, .type = MatType::lambertian};
-constexpr Material red_lambertian = {.atten = red, .type = MatType::lambertian};
-constexpr Material gold_lambertian = {.atten = gold, .type = MatType::lambertian};
-constexpr Material star_lambertian = {.atten = moon, .type = MatType::lambertian};
-constexpr Material grey_lambertian = {.atten = grey, .type = MatType::lambertian};
-
-constexpr Material glass = {.atten = white, .type = MatType::dielectric};
-
-alignas(32) static const int metallic_types[8] = {
-    MatType::metallic, MatType::metallic, MatType::metallic, MatType::metallic,
-    MatType::metallic, MatType::metallic, MatType::metallic, MatType::metallic,
-};
-
-alignas(32) static const int lambertian_types[8] = {
-    MatType::lambertian, MatType::lambertian, MatType::lambertian, MatType::lambertian,
-    MatType::lambertian, MatType::lambertian, MatType::lambertian, MatType::lambertian,
-};
-
-alignas(32) static const int dielectric_types[8] = {
-    MatType::dielectric, MatType::dielectric, MatType::dielectric, MatType::dielectric,
-    MatType::dielectric, MatType::dielectric, MatType::dielectric, MatType::dielectric,
-};
+#include "materials.hpp"
 
 static LCGRand lcg_rand;
-inline static void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {
+void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {
   Vec3_256 reflected = reflect(&rays->dir, &hit_rec->norm);
   normalize(&reflected);
 
@@ -55,7 +10,7 @@ inline static void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec)
   rays->dir = reflected & greater_than_zero;
 };
 
-[[nodiscard]] inline static __m256 near_zero(const Vec3_256* vec) {
+[[nodiscard]] __m256 near_zero(const Vec3_256* vec) {
   __m256 near_x = _mm256_cmp_ps(abs_256(vec->x), global::t_min_vec, global::cmplt);
   __m256 near_y = _mm256_cmp_ps(abs_256(vec->y), global::t_min_vec, global::cmplt);
   __m256 near_z = _mm256_cmp_ps(abs_256(vec->z), global::t_min_vec, global::cmplt);
@@ -63,7 +18,7 @@ inline static void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec)
   return _mm256_and_ps(near_x, _mm256_and_ps(near_y, near_z));
 };
 
-inline static void scatter_lambertian(RayCluster* rays, const HitRecords* hit_rec) {
+void scatter_lambertian(RayCluster* rays, const HitRecords* hit_rec) {
   Vec3_256 rand_vec = lcg_rand.random_unit_vec();
   Vec3_256 scatter_dir = rand_vec + hit_rec->norm;
 
@@ -71,7 +26,7 @@ inline static void scatter_lambertian(RayCluster* rays, const HitRecords* hit_re
   rays->dir = scatter_dir;
 }
 
-[[nodiscard]] inline static __m256 reflectance(__m256 cos, __m256 ref_idx) {
+[[nodiscard]] __m256 reflectance(__m256 cos, __m256 ref_idx) {
   __m256 ref_low = global::white - ref_idx;
   __m256 ref_high = global::white + ref_idx;
   ref_high = _mm256_rcp_ps(ref_high);
@@ -89,7 +44,7 @@ inline static void scatter_lambertian(RayCluster* rays, const HitRecords* hit_re
   return _mm256_fmadd_ps(ref_sub, cos_5, ref);
 }
 
-inline static void scatter_dielectric(RayCluster* rays, const HitRecords* hit_rec) {
+void scatter_dielectric(RayCluster* rays, const HitRecords* hit_rec) {
 
   __m256 ri = _mm256_blendv_ps(global::ir_vec, global::rcp_ir_vec, hit_rec->front_face);
   Vec3_256 unit_dir = rays->dir;
@@ -123,7 +78,7 @@ inline static void scatter_dielectric(RayCluster* rays, const HitRecords* hit_re
   }
 }
 
-inline static void scatter(RayCluster* rays, const HitRecords* hit_rec) {
+void scatter(RayCluster* rays, const HitRecords* hit_rec) {
   __m256i metallic_type = _mm256_load_si256((__m256i*)metallic_types);
   __m256i lambertian_type = _mm256_load_si256((__m256i*)lambertian_types);
   __m256i dielectric_type = _mm256_load_si256((__m256i*)dielectric_types);
