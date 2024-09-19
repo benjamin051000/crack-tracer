@@ -1,4 +1,5 @@
 #include "rand.hpp"
+#include "math.hpp"
 
   [[nodiscard]] Vec3_256 LCGRand::random_unit_vec() {
     Vec3_256 rand_vec = rand_vec_in_cube();

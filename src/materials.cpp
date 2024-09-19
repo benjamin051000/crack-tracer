@@ -1,4 +1,6 @@
 #include "materials.hpp"
+#include "globals.hpp"
+#include "math.hpp"
 
 static LCGRand lcg_rand;
 void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {

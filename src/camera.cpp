@@ -1,6 +1,6 @@
 #include "camera.hpp"
 
-Camera::register_key_event(SDL_Event e) {
+void Camera::register_key_event(SDL_Event e) {
   uint32_t key = e.key.keysym.sym;
 
   if (e.type == SDL_KEYDOWN) {
