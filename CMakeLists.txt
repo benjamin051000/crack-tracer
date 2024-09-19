@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(crack-tracer)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 add_subdirectory(src)
 
 if(NOT CMAKE_BUILD_TYPE)
