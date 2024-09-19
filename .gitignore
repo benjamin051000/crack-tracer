@@ -60,3 +60,5 @@ asm_output.s
 .cache/
 # cmake artifacts
 build/
+# Output files
+*.png
