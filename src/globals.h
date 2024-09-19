@@ -17,7 +17,7 @@ constexpr Color_256 night = {
 
 namespace global {
   // each group calculates 8 samples.
-  constexpr uint16_t sample_group_num = 500;
+  constexpr uint16_t sample_group_num = 10;
   constexpr uint8_t cmpeq = 0;
   constexpr uint8_t cmplt = 1;
   constexpr uint8_t cmple = 2;
@@ -29,10 +29,8 @@ namespace global {
   constexpr uint8_t shuf_all_third = 170;
   constexpr uint8_t ray_depth = 20;
   constexpr float float_max = FLT_MAX;
-  constexpr uint16_t img_width = 2560;
-  constexpr uint16_t img_height = 1440;
-  // constexpr uint16_t img_width = 1920;
-  // constexpr uint16_t img_height = 1080;
+  constexpr uint16_t img_width = 1920;
+  constexpr uint16_t img_height = 1080;
   constexpr float viewport_height = 2.f;
   constexpr float viewport_width = viewport_height * (float(img_width) / img_height);
   constexpr float pix_du = viewport_width / img_width;
@@ -42,7 +40,7 @@ namespace global {
   constexpr float sample_dv = pix_dv / (sample_group_num + 1);
   constexpr float focal_len = 1.0;
   constexpr float color_multiplier = 255.f / (sample_group_num * 8);
-  constexpr uint8_t thread_count = 60;
+  constexpr uint8_t thread_count = 12;
   constexpr RenderMode active_render_mode = RenderMode::png;
   // index of refraction
   constexpr float ir = 1.5;
