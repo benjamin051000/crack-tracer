@@ -4,7 +4,6 @@ add_executable(
 	${PROJECT_NAME}
 
 	camera.cpp      
-	comptime.cpp 
 	materials.cpp 
 	rand.cpp 
 	sphere.cpp
