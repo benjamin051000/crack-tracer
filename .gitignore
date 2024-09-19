@@ -56,3 +56,5 @@ _deps
 
 out/
 asm_output.s
+# A clangd thing
+.cache/
