@@ -1,6 +1,5 @@
-#pragma once
-#include "globals.h"
-#include "types.h"
+#include "comptime.hpp"
+#include "globals.hpp"
 
 namespace comptime {
   // gets us the first pixels row of sample directions during compile time.
