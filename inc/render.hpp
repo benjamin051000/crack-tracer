@@ -1,3 +1,4 @@
+#pragma once
 #include "camera.hpp"
 #include "comptime.hpp"
 #include "globals.hpp"
@@ -15,3 +16,4 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "utils.hpp"
 #include <stb_image_write.h>
+// TODO what is this file used for? Seems unnecessary.
