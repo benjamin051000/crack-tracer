@@ -1,10 +1,10 @@
-#include "camera.h"
-#include "comptime.h"
-#include "globals.h"
-#include "materials.h"
-#include "math.h"
-#include "sphere.h"
-#include "types.h"
+#include "camera.hpp"
+#include "comptime.hpp"
+#include "globals.hpp"
+#include "materials.hpp"
+#include "math.hpp"
+#include "sphere.hpp"
+#include "types.hpp"
 #include <SDL2/SDL.h>
 #include <array>
 #include <chrono>
@@ -13,5 +13,5 @@
 #include <future>
 #include <immintrin.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "utils.h"
+#include "utils.hpp"
 #include <stb_image_write.h>

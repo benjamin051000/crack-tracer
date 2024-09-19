@@ -1,4 +1,4 @@
-#include "globals.h"
+#include "globals.hpp"
 #include "render.hpp"
 
 int main() {
