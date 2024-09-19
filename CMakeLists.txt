@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(${PROJECT_NAME} src/entry.cpp)
 
+include_directories(${crack-tracer_SOURCE_DIR}/inc)
+
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 
 target_compile_options(

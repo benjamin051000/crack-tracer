@@ -1,5 +1,5 @@
 #include "globals.h"
-#include "render.h"
+#include "render.hpp"
 
 int main() {
   if constexpr (global::active_render_mode == RenderMode::real_time) {

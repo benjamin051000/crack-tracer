@@ -1,21 +1,4 @@
-#pragma once
-#include "camera.h"
-#include "comptime.h"
-#include "globals.h"
-#include "materials.h"
-#include "math.h"
-#include "sphere.h"
-#include "types.h"
-#include <SDL2/SDL.h>
-#include <array>
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <future>
-#include <immintrin.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "utils.h"
-#include <stb_image_write.h>
+#include "render.hpp"
 
 constexpr Color_256 sky = {
     .x = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f},
