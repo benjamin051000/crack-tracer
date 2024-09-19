@@ -1,12 +1,18 @@
 #include "render.hpp"
 
-constexpr Color_256 sky = {
-    .x = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f},
-    .y = {0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f},
-    .z = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f},
-};
+#include <SDL.h>
+#include <chrono>
+#include <future>
 
-inline static void update_colors(Color_256* curr_colors, const Color_256* new_colors,
+#include "camera.hpp"
+#include "globals.hpp"
+#include "math.hpp"
+#include "sphere.hpp"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+
+void update_colors(Color_256* curr_colors, const Color_256* new_colors,
                                  __m256 update_mask) {
 
   __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, global::all_set);
@@ -17,7 +23,7 @@ inline static void update_colors(Color_256* curr_colors, const Color_256* new_co
   *curr_colors *= ((*new_colors & update_mask) + preserve_curr);
 }
 
-inline static Color_256 ray_cluster_colors(RayCluster* rays) {
+Color_256 ray_cluster_colors(RayCluster* rays) {
   // will be used to add a sky tint to rays that at some point bounce off into space.
   // if a ray never bounces away (within amount of bounces set by depth), the
   // hit_mask will be all set (packed floats) and the sky tint will not affect its final color
@@ -57,7 +63,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays) {
 
 // writes a color buffer of 32 Color values to an image buffer
 // uses non temporal writes to avoid filling data cache
-inline static void write_out_color_buf(const Color* color_buf, CharColor* img_buf,
+void write_out_color_buf(const Color* color_buf, CharColor* img_buf,
                                        uint32_t write_pos) {
 
   __m256 cm = _mm256_broadcast_ss(&global::color_multiplier);
@@ -148,7 +154,7 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
   }
 }
 
-inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
+void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
   // comptime generated
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
@@ -222,7 +228,7 @@ inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pi
 
 using namespace std::chrono;
 
-inline static void render_png() {
+void render_png() {
   static_assert(global::img_height % global::thread_count == 0,
                 "Thread count must divide rows equally");
 
@@ -251,7 +257,7 @@ inline static void render_png() {
                  global::img_width * sizeof(CharColor));
 }
 
-inline static void render_realtime() {
+void render_realtime() {
   static_assert(global::img_height % global::thread_count == 0,
                 "Thread count must divide rows equally");
   CharColor* img_data =
