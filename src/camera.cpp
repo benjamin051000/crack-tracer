@@ -1,34 +1,38 @@
 #include "camera.hpp"
 
-void Camera::register_key_event(SDL_Event e) {
-  uint32_t key = e.key.keysym.sym;
+void Camera::register_key_event(const SDL_Event e) {
+  const uint32_t key = e.key.keysym.sym;
 
   if (e.type == SDL_KEYDOWN) {
-    if (key == SDLK_w) {
+    switch (key) {
+    case SDLK_w:
       velocity.z = -speed;
-    }
-    if (key == SDLK_s) {
+      break;
+    case SDLK_s:
       velocity.z = speed;
-    }
-    if (key == SDLK_a) {
+      break;
+    case SDLK_a:
       velocity.x = -speed;
-    }
-    if (key == SDLK_d) {
+      break;
+    case SDLK_d:
       velocity.x = speed;
+      break;
+    default:
+      break;
     }
   }
   if (e.type == SDL_KEYUP) {
-    if (key == SDLK_w) {
+    switch (key) {
+    case SDLK_w:
+    case SDLK_s:
       velocity.z = 0;
-    }
-    if (key == SDLK_s) {
-      velocity.z = 0;
-    }
-    if (key == SDLK_a) {
+      break;
+    case SDLK_a:
+    case SDLK_d:
       velocity.x = 0;
-    }
-    if (key == SDLK_d) {
-      velocity.x = 0;
+      break;
+    default:
+      break;
     }
   }
 }

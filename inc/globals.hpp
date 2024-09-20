@@ -18,6 +18,7 @@ constexpr Color_256 night = {
 namespace global {
   // each group calculates 8 samples.
   constexpr uint16_t sample_group_num = 10;
+// TODO use the predefined ones in avxintrin.h: _CMP_NLT_US instead of cmpnlt
   constexpr uint8_t cmpeq = 0;
   constexpr uint8_t cmplt = 1;
   constexpr uint8_t cmple = 2;

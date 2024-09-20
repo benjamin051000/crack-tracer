@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdio>
 #include <immintrin.h>
 
 #ifndef NDEBUG

@@ -5,12 +5,12 @@
 
 class Camera {
 public:
-  Vec3 origin = {-1.2, 1, 5};
-  void register_key_event(SDL_Event e);
+  Vec3 origin {-1.2, 1, 5};
 
+  void register_key_event(const SDL_Event e);
   void update();
 
 private:
-  Vec3 velocity = {0, 0, 0};
+  Vec3 velocity {0, 0, 0};
   const float speed = 0.01f;
 };

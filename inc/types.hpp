@@ -3,21 +3,15 @@
 #include <immintrin.h>
 
 struct Vec3 {
-  float x;
-  float y;
-  float z;
+  float x, y, z;
 };
 
 struct Vec3_256 {
-  __m256 x;
-  __m256 y;
-  __m256 z;
+  __m256 x, y, z;
 };
 
 struct CharColor {
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
+  uint8_t r, g, b;
 };
 
 enum MatType {
@@ -27,12 +21,13 @@ enum MatType {
 };
 
 using Color_256 = Vec3_256;
+using Color = Vec3;
+
 struct Material_256 {
   Color_256 atten;
   __m256i type;
 };
 
-using Color = Vec3;
 struct alignas(16) Material {
   Color atten;
   MatType type;

@@ -1,17 +1,17 @@
 #pragma once
 #include "comptime.hpp"
-#include "math.h"
+#include <cstdint>
 
 class LCGRand {
 public:
   [[nodiscard]] Vec3_256 random_unit_vec();
 
-  [[nodiscard]] float rand_in_range(float min, float max);
+  [[nodiscard]] float rand_in_range(const float min, const float max);
 
-  [[nodiscard]] __m256 rand_in_range_256(float min, float max);
+  [[nodiscard]] __m256 rand_in_range_256(const float min, const float max);
 
 private:
-	// TODO BUG these used to be static thread_local. They probably still need to be?
+  // TODO BUG these used to be static thread_local. They probably still need to be?
   static inline thread_local __m256i rseed_vec = comptime::init_rseed_arr();
   static inline thread_local uint32_t rseed = 0;
   const __m256i r_a = _mm256_set1_epi32((uint32_t)11035152453u);
@@ -24,5 +24,5 @@ private:
   [[nodiscard]] __m256i lcg_rand_256();
 
   // scalar versions of rand generation
-  [[nodiscard]] int lcg_rand();
+  [[nodiscard]] uint32_t lcg_rand();
 };

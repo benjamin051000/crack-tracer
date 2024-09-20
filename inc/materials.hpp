@@ -45,14 +45,15 @@ alignas(32) static const int dielectric_types[8] = {
 };
 
 // static LCGRand lcg_rand;
-void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec);
+void scatter_metallic(RayCluster& rays, const HitRecords& hit_rec);
 
-[[nodiscard]] __m256 near_zero(const Vec3_256* vec);
+// TODO move into the math area probably
+[[nodiscard]] __m256 near_zero(const Vec3_256& vec);
 
-void scatter_lambertian(RayCluster* rays, const HitRecords* hit_rec);
+void scatter_lambertian(RayCluster& rays, const HitRecords& hit_rec);
 
-[[nodiscard]] __m256 reflectance(__m256 cos, __m256 ref_idx);
+[[nodiscard]] __m256 reflectance(const __m256 cos, const __m256 ref_idx);
 
-void scatter_dielectric(RayCluster* rays, const HitRecords* hit_rec);
+void scatter_dielectric(RayCluster& rays, const HitRecords& hit_rec);
 
-void scatter(RayCluster* rays, const HitRecords* hit_rec);
+void scatter(RayCluster& rays, const HitRecords& hit_rec);

@@ -6,24 +6,24 @@
 
 #include "camera.hpp"
 #include "globals.hpp"
+#include "materials.hpp"
 #include "math.hpp"
 #include "sphere.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
 
-void update_colors(Color_256* curr_colors, const Color_256* new_colors,
-                                 __m256 update_mask) {
+void update_colors(Color_256& curr_colors, const Color_256& new_colors, const __m256 update_mask) {
 
   __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, global::all_set);
   __m256 preserve_curr = _mm256_and_ps(global::white, new_no_hit_mask);
 
   // multiply current colors by the attenuation of new hits.
   // fill 1.0 for no hits in order to preserve current colors when multiplying
-  *curr_colors *= ((*new_colors & update_mask) + preserve_curr);
+  curr_colors *= ((new_colors & update_mask) + preserve_curr);
 }
 
-Color_256 ray_cluster_colors(RayCluster* rays) {
+[[nodiscard]] Color_256 ray_cluster_colors(RayCluster& rays) {
   // will be used to add a sky tint to rays that at some point bounce off into space.
   // if a ray never bounces away (within amount of bounces set by depth), the
   // hit_mask will be all set (packed floats) and the sky tint will not affect its final color
@@ -38,24 +38,24 @@ Color_256 ray_cluster_colors(RayCluster* rays) {
       .z = global::white,
   };
 
-  for (int i = 0; i < global::ray_depth; i++) {
+  for (auto i = 0; i < global::ray_depth; ++i) {
 
-    find_sphere_hits(&hit_rec, rays, INFINITY);
+    find_sphere_hits(hit_rec, rays, INFINITY);
 
     // or a mask when a value is not a hit, at any point.
     // if all are zero, break
-    __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, global::cmpnle);
-    __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, global::all_set);
+    const __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, global::cmpnle);
+    const __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, global::all_set);
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
     if (_mm256_testz_ps(new_hit_mask, new_hit_mask)) {
-      update_colors(&colors, &global::background_color, no_hit_mask);
+      update_colors(colors, global::background_color, no_hit_mask);
       break;
     }
 
-    scatter(rays, &hit_rec);
+    scatter(rays, hit_rec);
 
-    update_colors(&colors, &hit_rec.mat.atten, new_hit_mask);
+    update_colors(colors, hit_rec.mat.atten, new_hit_mask);
   }
 
   return colors;
@@ -63,8 +63,11 @@ Color_256 ray_cluster_colors(RayCluster* rays) {
 
 // writes a color buffer of 32 Color values to an image buffer
 // uses non temporal writes to avoid filling data cache
-void write_out_color_buf(const Color* color_buf, CharColor* img_buf,
-                                       uint32_t write_pos) {
+void write_out_color_buf(
+	const Color *const color_buf,
+	const CharColor *const img_buf,
+	uint32_t write_pos
+) {
 
   __m256 cm = _mm256_broadcast_ss(&global::color_multiplier);
   __m256 colors_1_f32 = _mm256_load_ps((float*)color_buf) * cm;
@@ -154,7 +157,7 @@ void write_out_color_buf(const Color* color_buf, CharColor* img_buf,
   }
 }
 
-void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
+void render(CharColor *const img_buf, const Vec3 cam_origin, const uint32_t pix_offset) {
   // comptime generated
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
@@ -191,7 +194,7 @@ void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
         __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
         samples.dir.y += y_scale_vec;
 
-        sample_color += ray_cluster_colors(&samples);
+        sample_color += ray_cluster_colors(samples);
       }
 
       // accumulate all color channels into first float of vec
