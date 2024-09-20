@@ -122,7 +122,7 @@
   return a;
 }
 
-[[nodiscard]]  __m256 dot(const Vec3_256* a, const Vec3_256* b) {
+[[nodiscard, gnu::hot]] __m256 dot(const Vec3_256 *const a, const Vec3_256 *const b) {
   __m256 dot = _mm256_mul_ps(a->x, b->x);
   dot = _mm256_fmadd_ps(a->y, b->y, dot);
   return _mm256_fmadd_ps(a->z, b->z, dot);

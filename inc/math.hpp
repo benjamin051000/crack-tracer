@@ -35,7 +35,7 @@
 
  Vec3_256& operator&=(Vec3_256& a, const __m256& b);
 
-[[nodiscard]]  __m256 dot(const Vec3_256* a, const Vec3_256* b);
+[[nodiscard]] __m256 dot(const Vec3_256 *const __restrict__ a, const Vec3_256 *const __restrict__ b);
 
 // reflect a ray about the axis
 // v = v - 2*dot(v,n)*n;
