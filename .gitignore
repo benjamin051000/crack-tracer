@@ -62,3 +62,5 @@ asm_output.s
 build/
 # Output files
 *.png
+# Perf data
+*.data
