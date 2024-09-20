@@ -51,14 +51,14 @@ void init_spheres() {
 [[nodiscard]]  __m256 sphere_hit(const RayCluster* rays, const Sphere* sphere,
                                               float t_max) {
 
-  Vec3_256 sphere_center = broadcast_vec(&sphere->center);
+  Vec3_256 sphere_center = broadcast_vec(sphere->center);
   Vec3_256 oc = sphere_center - rays->orig;
   float rad_2 = sphere->r * sphere->r;
   __m256 rad_2_vec = _mm256_broadcast_ss(&rad_2);
 
-  __m256 a = dot(&rays->dir, &rays->dir);
-  __m256 b = dot(&rays->dir, &oc);
-  __m256 c = dot(&oc, &oc) - rad_2_vec;
+  __m256 a = dot(rays->dir, rays->dir);
+  __m256 b = dot(rays->dir, oc);
+  __m256 c = dot(oc, oc) - rad_2_vec;
 
   __m256 discrim = _mm256_fmsub_ps(b, b, a * c);
 
@@ -100,10 +100,10 @@ void init_spheres() {
 
  void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
                                    const Vec3_256* outward_norm) {
-  __m256 ray_norm_dot = dot(&rays->dir, outward_norm);
+  __m256 ray_norm_dot = dot(rays->dir, *outward_norm);
   hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), global::cmplt);
   hit_rec->norm = -*outward_norm;
-  hit_rec->norm = blend_vec256(&hit_rec->norm, outward_norm, hit_rec->front_face);
+  hit_rec->norm = blend_vec256(hit_rec->norm, *outward_norm, hit_rec->front_face);
 }
 
  void create_hit_record(HitRecords* hit_rec, const RayCluster* rays,
@@ -131,10 +131,10 @@ void init_spheres() {
   }
 
   SphereCluster new_spheres = {
-      .center = broadcast_vec(&curr_sphere.center),
+      .center = broadcast_vec(curr_sphere.center),
       .mat =
           {
-              .atten = broadcast_vec(&curr_sphere.mat.atten),
+              .atten = broadcast_vec(curr_sphere.mat.atten),
               .type = _mm256_set1_epi32(curr_sphere.mat.type),
           },
       .r = _mm256_broadcast_ss(&curr_sphere.r),

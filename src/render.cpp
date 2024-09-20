@@ -159,7 +159,7 @@ void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
       .dir = base_dirs,
-      .orig = broadcast_vec(&cam_origin),
+      .orig = broadcast_vec(cam_origin),
   };
 
   Color_256 sample_color;

@@ -3,7 +3,7 @@
 
   [[nodiscard]] Vec3_256 LCGRand::random_unit_vec() {
     Vec3_256 rand_vec = rand_vec_in_cube();
-    normalize(&rand_vec);
+    normalize(rand_vec);
     return rand_vec;
   };
 

@@ -137,7 +137,7 @@ Vec3_256& operator*=(Vec3_256& a, const __m256& b) {
 
 [[nodiscard]] __m256 abs_256(const __m256 vec) {
   const __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
-  return _mm256_and_ps(vec, static_cast<__m256>(sign_mask));
+  return _mm256_and_ps(vec, (__m256)sign_mask);
 }
 
 [[nodiscard]] Vec3_256 refract(const Vec3_256& ray_dir, const Vec3_256& norm, const __m256 ratio) {
@@ -152,7 +152,7 @@ Vec3_256& operator*=(Vec3_256& a, const __m256& b) {
   };
   r_out_perp *= ratio;
 
-  __m256 r_out_parallel_scale = global::white - dot(&r_out_perp, &r_out_perp);
+  __m256 r_out_parallel_scale = global::white - dot(r_out_perp, r_out_perp);
 
   r_out_parallel_scale = abs_256(r_out_parallel_scale);
 

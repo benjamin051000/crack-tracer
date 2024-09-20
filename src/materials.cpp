@@ -4,10 +4,10 @@
 
 static LCGRand lcg_rand;
 void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {
-  Vec3_256 reflected = reflect(&rays->dir, &hit_rec->norm);
-  normalize(&reflected);
+  Vec3_256 reflected = reflect(rays->dir, hit_rec->norm);
+  normalize(reflected);
 
-  __m256 dp = dot(&reflected, &hit_rec->norm);
+  __m256 dp = dot(reflected, hit_rec->norm);
   __m256 greater_than_zero = _mm256_cmp_ps(dp, global::zeros, global::cmpnle);
   rays->dir = reflected & greater_than_zero;
 };
@@ -50,11 +50,11 @@ void scatter_dielectric(RayCluster* rays, const HitRecords* hit_rec) {
 
   __m256 ri = _mm256_blendv_ps(global::ir_vec, global::rcp_ir_vec, hit_rec->front_face);
   Vec3_256 unit_dir = rays->dir;
-  normalize(&unit_dir);
+  normalize(unit_dir);
 
   Vec3_256 inverse_unit_dir = -unit_dir;
 
-  __m256 cos_theta = dot(&inverse_unit_dir, &hit_rec->norm);
+  __m256 cos_theta = dot(inverse_unit_dir, hit_rec->norm);
   cos_theta = _mm256_min_ps(cos_theta, global::white);
 
   __m256 sin_theta = _mm256_sqrt_ps(global::white - cos_theta * cos_theta);
@@ -69,14 +69,14 @@ void scatter_dielectric(RayCluster* rays, const HitRecords* hit_rec) {
   __m256 reflection_loc = _mm256_xor_ps(refraction_loc, global::all_set);
 
   if (!_mm256_testz_ps(refraction_loc, refraction_loc)) {
-    Vec3_256 refract_dir = refract(&unit_dir, &hit_rec->norm, ri);
-    rays->dir = blend_vec256(&rays->dir, &refract_dir, refraction_loc);
+    Vec3_256 refract_dir = refract(unit_dir, hit_rec->norm, ri);
+    rays->dir = blend_vec256(rays->dir, refract_dir, refraction_loc);
   }
   if (!_mm256_testz_ps(reflection_loc, reflection_loc)) {
-    Vec3_256 reflect_dir = reflect(&unit_dir, &hit_rec->norm);
+    Vec3_256 reflect_dir = reflect(unit_dir, hit_rec->norm);
 
     reflection_loc = _mm256_and_ps(reflection_loc, hit_rec->front_face);
-    rays->dir = blend_vec256(&rays->dir, &reflect_dir, reflection_loc);
+    rays->dir = blend_vec256(rays->dir, reflect_dir, reflection_loc);
   }
 }
 
@@ -96,8 +96,8 @@ void scatter(RayCluster* rays, const HitRecords* hit_rec) {
     };
     scatter_metallic(&metallic_rays, hit_rec);
 
-    rays->dir = blend_vec256(&rays->dir, &metallic_rays.dir, (__m256)metallic_loc);
-    rays->orig = blend_vec256(&rays->orig, &metallic_rays.orig, (__m256)metallic_loc);
+    rays->dir = blend_vec256(rays->dir, metallic_rays.dir, (__m256)metallic_loc);
+    rays->orig = blend_vec256(rays->orig, metallic_rays.orig, (__m256)metallic_loc);
   }
   if (!_mm256_testz_si256(lambertian_loc, lambertian_loc)) {
     RayCluster lambertian_rays = {
@@ -106,8 +106,8 @@ void scatter(RayCluster* rays, const HitRecords* hit_rec) {
     };
     scatter_lambertian(&lambertian_rays, hit_rec);
 
-    rays->dir = blend_vec256(&rays->dir, &lambertian_rays.dir, (__m256)lambertian_loc);
-    rays->orig = blend_vec256(&rays->orig, &lambertian_rays.orig, (__m256)lambertian_loc);
+    rays->dir = blend_vec256(rays->dir, lambertian_rays.dir, (__m256)lambertian_loc);
+    rays->orig = blend_vec256(rays->orig, lambertian_rays.orig, (__m256)lambertian_loc);
   }
   if (!_mm256_testz_si256(dielectric_loc, dielectric_loc)) {
     RayCluster dielectric_rays = {
@@ -116,7 +116,7 @@ void scatter(RayCluster* rays, const HitRecords* hit_rec) {
     };
     scatter_dielectric(&dielectric_rays, hit_rec);
 
-    rays->dir = blend_vec256(&rays->dir, &dielectric_rays.dir, (__m256)dielectric_loc);
-    rays->orig = blend_vec256(&rays->orig, &dielectric_rays.orig, (__m256)dielectric_loc);
+    rays->dir = blend_vec256(rays->dir, dielectric_rays.dir, (__m256)dielectric_loc);
+    rays->orig = blend_vec256(rays->orig, dielectric_rays.orig, (__m256)dielectric_loc);
   }
 }
