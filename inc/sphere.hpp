@@ -1,8 +1,8 @@
 #pragma once
-#include "materials.h"
-#include "math.h"
-#include "rand.h"
-#include "types.h"
+#include "materials.hpp"
+#include "math.hpp"
+#include "rand.hpp"
+#include "types.hpp"
 #include <cstdlib>
 #include <immintrin.h>
 #include <vector>

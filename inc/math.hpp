@@ -1,6 +1,6 @@
 #pragma once
-#include "globals.h"
-#include "types.h"
+#include "globals.hpp"
+#include "types.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <immintrin.h>

@@ -1,8 +1,8 @@
 #pragma once
-#include "globals.h"
-#include "math.h"
-#include "rand.h"
-#include "types.h"
+#include "globals.hpp"
+#include "math.hpp"
+#include "rand.hpp"
+#include "types.hpp"
 #include <cmath>
 #include <cstdlib>
 #include <immintrin.h>
