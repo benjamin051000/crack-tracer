@@ -1,22 +1,16 @@
 #pragma once
+#include <cmath>
+#include <cstdlib>
+#include <immintrin.h>
 #include "globals.hpp"
 #include "math.hpp"
 #include "rand.hpp"
 #include "types.hpp"
-#include <cmath>
-#include <cstdlib>
-#include <immintrin.h>
+#include "colors.hpp"
 
 namespace {
 
-constexpr Color silver = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
-constexpr Color grey = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
-constexpr Color white = {.x = 1.f, .y = 1.f, .z = 1.f};
-constexpr Color red = {.x = 0.90f, .y = 0.20f, .z = 0.20f};
-constexpr Color gold = {.x = 0.90f, .y = 0.75f, .z = 0.54f};
-constexpr Color copper = {.x = 0.59f, .y = 0.34f, .z = 0.29f};
-constexpr Color green = {.x = 0.f, .y = 1.f, .z = 0.f};
-constexpr Color moon = {.x = 100.f, .y = 100.f, .z = 100.f};
+using namespace colors;
 
 constexpr Material silver_metallic = {.atten = silver, .type = MatType::metallic};
 constexpr Material red_metallic = {.atten = red, .type = MatType::metallic};

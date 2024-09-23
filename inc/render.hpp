@@ -17,12 +17,6 @@
 #include "utils.hpp"
 #include <stb_image_write.h>
 
-constexpr Color_256 sky = {
-    .x = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f},
-    .y = {0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f, 0.7f},
-    .z = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f},
-};
-
 inline static void update_colors(Color_256* curr_colors, const Color_256* new_colors,
                                  __m256 update_mask) {
 

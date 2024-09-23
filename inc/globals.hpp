@@ -9,12 +9,6 @@ enum RenderMode {
   real_time,
 };
 
-constexpr Color_256 night = {
-    .x = {0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02},
-    .y = {0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08},
-    .z = {0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35},
-};
-
 namespace global {
   // each group calculates 8 samples.
   constexpr uint16_t sample_group_num = 10;

@@ -1,24 +1,9 @@
 #pragma once
-#include <cstdint>
+#include "colors.hpp"
+#include "vec.hpp"
 #include <immintrin.h>
 
-struct Vec3 {
-  float x;
-  float y;
-  float z;
-};
-
-struct Vec3_256 {
-  __m256 x;
-  __m256 y;
-  __m256 z;
-};
-
-struct CharColor {
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-};
+using namespace colors;
 
 enum MatType {
   metallic,
@@ -26,13 +11,11 @@ enum MatType {
   dielectric,
 };
 
-using Color_256 = Vec3_256;
 struct Material_256 {
   Color_256 atten;
   __m256i type;
 };
 
-using Color = Vec3;
 struct alignas(16) Material {
   Color atten;
   MatType type;
