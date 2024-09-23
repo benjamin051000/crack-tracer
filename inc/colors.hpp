@@ -16,9 +16,9 @@ constexpr Color green = {.x = 0.f, .y = 1.f, .z = 0.f};
 constexpr Color moon = {.x = 100.f, .y = 100.f, .z = 100.f};
 
 constexpr Color_256 night = {
-    .x = {0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02},
-    .y = {0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08},
-    .z = {0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35, 0.35},
+    .x = {0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f},
+    .y = {0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f},
+    .z = {0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f, 0.35f},
 };
 
 constexpr Color_256 sky = {
@@ -27,4 +27,9 @@ constexpr Color_256 sky = {
     .z = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f},
 };
 
+// TODO rename to black or something
+constexpr __m256 zeros256 = {0, 0, 0, 0, 0, 0, 0, 0};
+constexpr __m256 white256 = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f};
+
+constexpr Color_256 background_color = {.x = white256, .y = white256, .z = white256};
 } // end of namespace colors

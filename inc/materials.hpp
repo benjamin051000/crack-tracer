@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <immintrin.h>
 #include "globals.hpp"
-#include "math.hpp"
 #include "rand.hpp"
 #include "types.hpp"
 #include "colors.hpp"
@@ -69,20 +68,20 @@ LCGRand lcg_rand;
 }
 
 [[nodiscard, gnu::always_inline]] inline __m256 reflectance(__m256 cos, __m256 ref_idx) {
-  __m256 ref_low = global::white - ref_idx;
-  __m256 ref_high = global::white + ref_idx;
+  __m256 ref_low = global::ones - ref_idx;
+  __m256 ref_high = global::ones + ref_idx;
   ref_high = _mm256_rcp_ps(ref_high);
   __m256 ref = ref_low * ref_high;
   ref *= ref;
 
-  __m256 cos_sub = global::white - cos;
+  __m256 cos_sub = global::ones - cos;
   // cos_sub^5
   __m256 cos_5 = cos_sub * cos_sub;
   cos_5 *= cos_sub;
   cos_5 *= cos_sub;
   cos_5 *= cos_sub;
 
-  __m256 ref_sub = global::white - ref;
+  __m256 ref_sub = global::ones - ref;
   return _mm256_fmadd_ps(ref_sub, cos_5, ref);
 }
 
@@ -95,12 +94,12 @@ LCGRand lcg_rand;
   Vec3_256 inverse_unit_dir = -unit_dir;
 
   __m256 cos_theta = dot(&inverse_unit_dir, &hit_rec->norm);
-  cos_theta = _mm256_min_ps(cos_theta, global::white);
+  cos_theta = _mm256_min_ps(cos_theta, global::ones);
 
-  __m256 sin_theta = _mm256_sqrt_ps(global::white - cos_theta * cos_theta);
+  __m256 sin_theta = _mm256_sqrt_ps(global::ones - cos_theta * cos_theta);
 
   __m256 can_refract = ri * sin_theta;
-  can_refract = _mm256_cmp_ps(can_refract, global::white, global::cmple);
+  can_refract = _mm256_cmp_ps(can_refract, global::ones, global::cmple);
 
   __m256 ref = reflectance(cos_theta, ri);
   __m256 rand_vec = lcg_rand.rand_in_range_256(0.f, 1.f);

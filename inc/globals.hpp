@@ -1,5 +1,4 @@
 #pragma once
-#include "types.hpp"
 #include <immintrin.h>
 #include <cfloat>
 #include <cstdint>
@@ -10,6 +9,11 @@ enum RenderMode {
 };
 
 namespace global {
+  constexpr uint16_t img_width = 1920;
+  constexpr uint16_t img_height = 1080;
+  constexpr uint8_t thread_count = 12;
+  constexpr RenderMode active_render_mode = RenderMode::png;
+
   // each group calculates 8 samples.
   constexpr uint16_t sample_group_num = 10;
   constexpr uint8_t cmpeq = 0;
@@ -23,8 +27,7 @@ namespace global {
   constexpr uint8_t shuf_all_third = 170;
   constexpr uint8_t ray_depth = 20;
   constexpr float float_max = FLT_MAX;
-  constexpr uint16_t img_width = 1920;
-  constexpr uint16_t img_height = 1080;
+
   constexpr float viewport_height = 2.f;
   constexpr float viewport_width = viewport_height * (float(img_width) / img_height);
   constexpr float pix_du = viewport_width / img_width;
@@ -34,8 +37,7 @@ namespace global {
   constexpr float sample_dv = pix_dv / (sample_group_num + 1);
   constexpr float focal_len = 1.0;
   constexpr float color_multiplier = 255.f / (sample_group_num * 8);
-  constexpr uint8_t thread_count = 12;
-  constexpr RenderMode active_render_mode = RenderMode::png;
+
   // index of refraction
   constexpr float ir = 1.5;
   // constexpr float ir = 1.5;
@@ -44,9 +46,10 @@ namespace global {
   constexpr __m256 rcp_ir_vec = {rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir};
   alignas(32) constexpr float cam_origin[4] = {0.f, 0.f, 0.0f, 0.f};
   const __m256 all_set = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), cmpeq);
-  constexpr __m256 zeros = {0, 0, 0, 0, 0, 0, 0, 0};
-  constexpr __m256 white = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f};
   constexpr float t_min = 0.0013f;
   constexpr __m256 t_min_vec = {t_min, t_min, t_min, t_min, t_min, t_min, t_min, t_min};
-  constexpr Color_256 background_color = {.x = white, .y = white, .z = white};
+
+constexpr __m256 zeros = {0, 0, 0, 0, 0, 0, 0, 0};
+constexpr __m256 ones = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f};
+
 } // namespace global

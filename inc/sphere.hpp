@@ -1,6 +1,5 @@
 #pragma once
 #include "materials.hpp"
-#include "math.hpp"
 #include "rand.hpp"
 #include "types.hpp"
 #include <cstdlib>

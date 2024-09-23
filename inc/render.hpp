@@ -3,7 +3,6 @@
 #include "comptime.hpp"
 #include "globals.hpp"
 #include "materials.hpp"
-#include "math.hpp"
 #include "sphere.hpp"
 #include "types.hpp"
 #include <SDL2/SDL.h>
@@ -14,14 +13,13 @@
 #include <future>
 #include <immintrin.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "utils.hpp"
 #include <stb_image_write.h>
 
 inline static void update_colors(Color_256* curr_colors, const Color_256* new_colors,
                                  __m256 update_mask) {
 
   __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, global::all_set);
-  __m256 preserve_curr = _mm256_and_ps(global::white, new_no_hit_mask);
+  __m256 preserve_curr = _mm256_and_ps(global::ones, new_no_hit_mask);
 
   // multiply current colors by the attenuation of new hits.
   // fill 1.0 for no hits in order to preserve current colors when multiplying
@@ -38,9 +36,9 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays) {
   hit_rec.front_face = global::zeros;
 
   Color_256 colors{
-      .x = global::white,
-      .y = global::white,
-      .z = global::white,
+      .x = global::ones,
+      .y = global::ones,
+      .z = global::ones,
   };
 
   for (int i = 0; i < global::ray_depth; i++) {
@@ -54,7 +52,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays) {
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
     if (_mm256_testz_ps(new_hit_mask, new_hit_mask)) {
-      update_colors(&colors, &global::background_color, no_hit_mask);
+      update_colors(&colors, &background_color, no_hit_mask);
       break;
     }
 

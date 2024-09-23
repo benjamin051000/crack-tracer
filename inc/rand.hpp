@@ -1,6 +1,5 @@
 #pragma once
 #include "comptime.hpp"
-#include "math.hpp"
 
 class LCGRand {
 public:
