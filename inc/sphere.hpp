@@ -4,6 +4,7 @@
 #include "types.hpp"
 #include <cstdlib>
 #include <immintrin.h>
+#include <limits>
 #include <vector>
 
 static std::vector<Sphere> spheres;
@@ -183,7 +184,8 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
       .r = global::zeros,
   };
 
-  __m256 max = _mm256_broadcast_ss(&global::float_max);
+  constexpr auto flt_max = std::numeric_limits<float>::max();
+  __m256 max = _mm256_broadcast_ss(&flt_max);
 
   // find first sphere as a baseline
   __m256 lowest_t_vals = sphere_hit(rays, &spheres[0], t_max);

@@ -41,7 +41,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays) {
       .z = global::ones,
   };
 
-  for (int i = 0; i < global::ray_depth; i++) {
+  for (int i = 0; i < config::ray_depth; i++) {
 
     find_sphere_hits(&hit_rec, rays, INFINITY);
 
@@ -135,7 +135,7 @@ inline static void write_out_color_buf(const Color* color_buf, CharColor* img_bu
   // SDL offsets our img pointer to a location that might not be aligned to 32 bytes.
   // Therefore we can't just stream from the registers to memory... :(
   write_pos *= 3;
-  if constexpr (global::active_render_mode == RenderMode::real_time) {
+  if constexpr (config::render_mode == RenderMode::real_time) {
     alignas(32) CharColor char_buf[32];
     _mm256_store_si256(((__m256i*)char_buf), colors_1_u8);
     _mm256_store_si256(((__m256i*)char_buf) + 1, colors_2_u8);
@@ -168,8 +168,8 @@ inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pi
   Color_256 sample_color;
   alignas(32) Color color_buf[32];
 
-  constexpr uint32_t write_chunk_size = global::img_width / 32;
-  uint32_t row = pix_offset / global::img_width;
+  constexpr uint32_t write_chunk_size = config::img_width / 32;
+  uint32_t row = pix_offset / config::img_width;
   uint32_t write_pos = row * write_chunk_size;
   uint16_t color_buf_idx = 0;
   uint16_t sample_group;
@@ -177,8 +177,8 @@ inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pi
   static_assert(global::sample_group_num > 0,
                 "there must be at least one group of ray samples to calculate");
 
-  for (; row < global::img_height; row += global::thread_count) {
-    for (uint32_t col = 0; col < global::img_width; col++) {
+  for (; row < config::img_height; row += config::thread_count) {
+    for (uint32_t col = 0; col < config::img_width; col++) {
       sample_color.x = _mm256_setzero_ps();
       sample_color.y = _mm256_setzero_ps();
       sample_color.z = _mm256_setzero_ps();
@@ -225,30 +225,30 @@ inline static void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pi
 
       color_buf_idx = 0;
     }
-    write_pos += ((global::thread_count - 1) * write_chunk_size);
+    write_pos += ((config::thread_count - 1) * write_chunk_size);
   }
 }
 
 using namespace std::chrono;
 
 inline static void render_png() {
-  static_assert(global::img_height % global::thread_count == 0,
+  static_assert(config::img_height % config::thread_count == 0,
                 "Thread count must divide rows equally");
 
   CharColor* img_data =
-      (CharColor*)aligned_alloc(32, global::img_width * global::img_height * sizeof(CharColor));
+      (CharColor*)aligned_alloc(32, config::img_width * config::img_height * sizeof(CharColor));
   init_spheres();
-  std::array<std::future<void>, global::thread_count> futures;
+  std::array<std::future<void>, config::thread_count> futures;
   Camera cam;
 
   auto start_time = system_clock::now();
 
-  for (size_t idx = 0; idx < global::thread_count; idx++) {
+  for (size_t idx = 0; idx < config::thread_count; idx++) {
     futures[idx] =
-        std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
+        std::async(std::launch::async, render, img_data, cam.origin, idx * config::img_width);
   }
 
-  for (size_t idx = 0; idx < global::thread_count; idx++) {
+  for (size_t idx = 0; idx < config::thread_count; idx++) {
     futures[idx].get();
   }
 
@@ -256,17 +256,17 @@ inline static void render_png() {
   auto dur = duration<float>(end_time - start_time);
   float milli = duration_cast<microseconds>(dur).count() / 1000.f;
   printf("render time (ms): %f\n", milli);
-  stbi_write_png("out.png", global::img_width, global::img_height, 3, img_data,
-                 global::img_width * sizeof(CharColor));
+  stbi_write_png("out.png", config::img_width, config::img_height, 3, img_data,
+                 config::img_width * sizeof(CharColor));
 }
 
 inline static void render_realtime() {
-  static_assert(global::img_height % global::thread_count == 0,
+  static_assert(config::img_height % config::thread_count == 0,
                 "Thread count must divide rows equally");
   CharColor* img_data =
-      (CharColor*)aligned_alloc(32, global::img_width * global::img_height * sizeof(CharColor));
+      (CharColor*)aligned_alloc(32, config::img_width * config::img_height * sizeof(CharColor));
   init_spheres();
-  std::array<std::future<void>, global::thread_count> futures{};
+  std::array<std::future<void>, config::thread_count> futures{};
   Camera cam;
 
   SDL_Window* win = NULL;
@@ -279,14 +279,14 @@ inline static void render_realtime() {
     exit(EXIT_FAILURE);
   }
 
-  win = SDL_CreateWindow("Crack Tracer", 100, 100, global::img_width, global::img_height, 0);
+  win = SDL_CreateWindow("Crack Tracer", 100, 100, config::img_width, config::img_height, 0);
   renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
   SDL_Texture* buffer =
       SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING,
-                        global::img_width, global::img_height);
+                        config::img_width, config::img_height);
 
-  int pitch = global::img_width * sizeof(CharColor);
+  int pitch = config::img_width * sizeof(CharColor);
 
   while (true) {
     SDL_Event e;
@@ -301,12 +301,12 @@ inline static void render_realtime() {
 
     SDL_LockTexture(buffer, NULL, (void**)(&img_data), &pitch);
 
-    for (size_t idx = 0; idx < global::thread_count; idx++) {
+    for (size_t idx = 0; idx < config::thread_count; idx++) {
       futures[idx] =
-          std::async(std::launch::async, render, img_data, cam.origin, idx * global::img_width);
+          std::async(std::launch::async, render, img_data, cam.origin, idx * config::img_width);
     }
 
-    for (size_t idx = 0; idx < global::thread_count; idx++) {
+    for (size_t idx = 0; idx < config::thread_count; idx++) {
       futures[idx].get();
     }
 
