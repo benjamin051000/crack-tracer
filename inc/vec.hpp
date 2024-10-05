@@ -153,8 +153,8 @@ inline Vec3_256& operator&=(Vec3_256& a, const __m256& b) {
   return *ray_dir - *axis * dot(ray_dir, axis) * reflect_scale;
 }
 
-[[nodiscard]] inline __m256 abs_256(__m256 vec) {
-  __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
+[[nodiscard, gnu::always_inline]] inline __m256 abs_256(const __m256& vec) {
+  const __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
   return _mm256_and_ps(vec, (__m256)sign_mask);
 }
 
@@ -207,11 +207,6 @@ inline Vec3_256 blend_vec256(const Vec3_256* a, const Vec3_256* b, __m256 mask) 
       .y = _mm256_blendv_ps(a->y, b->y, mask),
       .z = _mm256_blendv_ps(a->z, b->z, mask),
   };
-}
-
-inline uint32_t f_to_i(float f_val) {
-  f_val += 1 << 23;
-  return ((uint32_t)f_val) & 0x007FFFFF;
 }
 
 } // end of namespace (anonymous)

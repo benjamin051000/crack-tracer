@@ -152,7 +152,7 @@ inline static void update_sphere_cluster(SphereCluster* curr_cluster, Sphere cur
 
   // negation of update locations so we can preserve current values
   // while clearing bits where we will update
-  __m256 preserve_curr = _mm256_xor_ps(update_mask, global::all_set);
+  __m256 preserve_curr = _mm256_xor_ps(update_mask, (__m256)global::all_set);
 
   SphereCluster curr_spheres = {
       .center = curr_cluster->center & preserve_curr,
@@ -202,7 +202,7 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
 
     // replace all 0's with float maximum to not replace actual values with
     // 0's during the minimum comparisons. Again, 0's represent no hits
-    __m256 no_hit_loc = _mm256_xor_ps(hit_loc, global::all_set);
+    __m256 no_hit_loc = _mm256_xor_ps(hit_loc, (__m256)global::all_set);
     __m256 max_mask = _mm256_and_ps(no_hit_loc, max);
     new_t_vals = _mm256_or_ps(new_t_vals, max_mask);
 

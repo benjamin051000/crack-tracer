@@ -16,7 +16,7 @@ namespace global {
 
   // each group calculates 8 samples.
   constexpr uint16_t sample_group_num = 10;
-  constexpr uint8_t cmpeq = 0;
+  constexpr uint8_t cmpeq = 0;// TODO replace with the predefined ones
   constexpr uint8_t cmplt = 1;
   constexpr uint8_t cmple = 2;
   constexpr uint8_t cmpneq = 4;
@@ -45,11 +45,21 @@ namespace global {
   constexpr float rcp_ir = 1.f / ir;
   constexpr __m256 rcp_ir_vec = {rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir, rcp_ir};
   alignas(32) constexpr float cam_origin[4] = {0.f, 0.f, 0.0f, 0.f};
-  const __m256 all_set = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), cmpeq);
   constexpr float t_min = 0.0013f;
   constexpr __m256 t_min_vec = {t_min, t_min, t_min, t_min, t_min, t_min, t_min, t_min};
 
 constexpr __m256 zeros = {0, 0, 0, 0, 0, 0, 0, 0};
 constexpr __m256 ones = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f};
 
+const __m256i all_set = (__m256i)_mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), global::cmpeq); // TODO replace with the predefined ones (cmpeq)
 } // namespace global
+
+namespace { // simply to remove the need for `static` on all these methods.
+
+// TODO move to globals.cpp? Also, is this really necessary? Or is std stoi or whatever it is fast enough?
+inline uint32_t f_to_i(float f_val) {
+  f_val += 1 << 23;
+  return ((uint32_t)f_val) & 0x007FFFFF;
+}
+
+} // end of namespace (anonymous)

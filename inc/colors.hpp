@@ -1,10 +1,11 @@
 #pragma once
+#include "globals.hpp"
 #include "vec.hpp"
-
-namespace colors {
 
 using Color = Vec3;
 using Color_256 = Vec3_256;
+
+namespace colors {
 
 constexpr Color silver = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
 constexpr Color grey = {.x = 0.5f, .y = 0.5f, .z = 0.5f};
@@ -27,9 +28,5 @@ constexpr Color_256 sky = {
     .z = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f},
 };
 
-// TODO rename to black or something
-constexpr __m256 zeros256 = {0, 0, 0, 0, 0, 0, 0, 0};
-constexpr __m256 white256 = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f};
-
-constexpr Color_256 background_color = {.x = white256, .y = white256, .z = white256};
+constexpr Color_256 background_color = {.x = global::ones, .y = global::ones, .z = global::ones};
 } // end of namespace colors

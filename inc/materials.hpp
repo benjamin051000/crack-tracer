@@ -105,7 +105,7 @@ LCGRand lcg_rand;
   __m256 rand_vec = lcg_rand.rand_in_range_256(0.f, 1.f);
   __m256 low_reflectance_loc = _mm256_cmp_ps(ref, rand_vec, global::cmple);
   __m256 refraction_loc = _mm256_and_ps(can_refract, low_reflectance_loc);
-  __m256 reflection_loc = _mm256_xor_ps(refraction_loc, global::all_set);
+  __m256 reflection_loc = _mm256_xor_ps(refraction_loc, (__m256)global::all_set);
 
   if (!_mm256_testz_ps(refraction_loc, refraction_loc)) {
     Vec3_256 refract_dir = refract(&unit_dir, &hit_rec->norm, ri);

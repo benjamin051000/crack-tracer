@@ -18,7 +18,7 @@
 inline static void update_colors(Color_256* curr_colors, const Color_256* new_colors,
                                  __m256 update_mask) {
 
-  __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, global::all_set);
+  __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, (__m256)global::all_set);
   __m256 preserve_curr = _mm256_and_ps(global::ones, new_no_hit_mask);
 
   // multiply current colors by the attenuation of new hits.
@@ -48,7 +48,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays) {
     // or a mask when a value is not a hit, at any point.
     // if all are zero, break
     __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, global::cmpnle);
-    __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, global::all_set);
+    __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, (__m256)global::all_set);
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
     if (_mm256_testz_ps(new_hit_mask, new_hit_mask)) {
