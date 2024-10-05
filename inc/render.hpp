@@ -47,7 +47,7 @@ inline static Color_256 ray_cluster_colors(RayCluster* rays) {
 
     // or a mask when a value is not a hit, at any point.
     // if all are zero, break
-    __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, global::cmpnle);
+    __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, _CMP_NLE_US);
     __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, (__m256)global::all_set);
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);

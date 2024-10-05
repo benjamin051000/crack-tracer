@@ -47,14 +47,14 @@ LCGRand lcg_rand;
   normalize(&reflected);
 
   __m256 dp = dot(&reflected, &hit_rec->norm);
-  __m256 greater_than_zero = _mm256_cmp_ps(dp, global::zeros, global::cmpnle);
+  __m256 greater_than_zero = _mm256_cmp_ps(dp, global::zeros, _CMP_NLE_US);
   rays->dir = reflected & greater_than_zero;
 };
 
 [[nodiscard, gnu::always_inline]] inline __m256 near_zero(const Vec3_256* vec) {
-  __m256 near_x = _mm256_cmp_ps(abs_256(vec->x), global::t_min_vec, global::cmplt);
-  __m256 near_y = _mm256_cmp_ps(abs_256(vec->y), global::t_min_vec, global::cmplt);
-  __m256 near_z = _mm256_cmp_ps(abs_256(vec->z), global::t_min_vec, global::cmplt);
+  __m256 near_x = _mm256_cmp_ps(abs_256(vec->x), global::t_min_vec, _CMP_LT_OS);
+  __m256 near_y = _mm256_cmp_ps(abs_256(vec->y), global::t_min_vec, _CMP_LT_OS);
+  __m256 near_z = _mm256_cmp_ps(abs_256(vec->z), global::t_min_vec, _CMP_LT_OS);
 
   return _mm256_and_ps(near_x, _mm256_and_ps(near_y, near_z));
 };
@@ -99,11 +99,11 @@ LCGRand lcg_rand;
   __m256 sin_theta = _mm256_sqrt_ps(global::ones - cos_theta * cos_theta);
 
   __m256 can_refract = ri * sin_theta;
-  can_refract = _mm256_cmp_ps(can_refract, global::ones, global::cmple);
+  can_refract = _mm256_cmp_ps(can_refract, global::ones, _CMP_LE_OS);
 
   __m256 ref = reflectance(cos_theta, ri);
   __m256 rand_vec = lcg_rand.rand_in_range_256(0.f, 1.f);
-  __m256 low_reflectance_loc = _mm256_cmp_ps(ref, rand_vec, global::cmple);
+  __m256 low_reflectance_loc = _mm256_cmp_ps(ref, rand_vec, _CMP_LE_OS);
   __m256 refraction_loc = _mm256_and_ps(can_refract, low_reflectance_loc);
   __m256 reflection_loc = _mm256_xor_ps(refraction_loc, (__m256)global::all_set);
 

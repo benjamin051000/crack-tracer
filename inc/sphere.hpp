@@ -66,7 +66,7 @@ inline static void init_spheres() {
 
   __m256 discrim = _mm256_fmsub_ps(b, b, a * c);
 
-  __m256 hit_loc = _mm256_cmp_ps(discrim, global::zeros, global::cmpnlt);
+  __m256 hit_loc = _mm256_cmp_ps(discrim, global::zeros, _CMP_NLT_US);
   int no_hit = _mm256_testz_ps(hit_loc, hit_loc);
 
   if (no_hit) {
@@ -84,8 +84,8 @@ inline static void init_spheres() {
 
   // allow through roots within the max t value
   __m256 t_max_vec = _mm256_broadcast_ss(&t_max);
-  __m256 below_max = _mm256_cmp_ps(root, t_max_vec, global::cmplt);
-  __m256 above_min = _mm256_cmp_ps(root, global::t_min_vec, global::cmpnlt);
+  __m256 below_max = _mm256_cmp_ps(root, t_max_vec, _CMP_LT_OS);
+  __m256 above_min = _mm256_cmp_ps(root, global::t_min_vec, _CMP_NLT_US);
   hit_loc = _mm256_and_ps(above_min, below_max);
 
   // Only clear materials can have another root thats worth finding.
@@ -93,8 +93,8 @@ inline static void init_spheres() {
   // is dielectric.
   if (_mm256_testz_ps(hit_loc, hit_loc) && sphere->mat.type == dielectric) {
     root = (b + sqrt_d) * recip_a;
-    below_max = _mm256_cmp_ps(root, t_max_vec, global::cmplt);
-    above_min = _mm256_cmp_ps(root, global::t_min_vec, global::cmpnlt);
+    below_max = _mm256_cmp_ps(root, t_max_vec, _CMP_LT_OS);
+    above_min = _mm256_cmp_ps(root, global::t_min_vec, _CMP_NLT_US);
     hit_loc = _mm256_and_ps(above_min, below_max);
   }
   root = _mm256_and_ps(root, hit_loc);
@@ -105,7 +105,7 @@ inline static void init_spheres() {
 inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
                                    const Vec3_256* outward_norm) {
   __m256 ray_norm_dot = dot(&rays->dir, outward_norm);
-  hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), global::cmplt);
+  hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), _CMP_LT_OS);
   hit_rec->norm = -*outward_norm;
   hit_rec->norm = blend_vec256(&hit_rec->norm, outward_norm, hit_rec->front_face);
 }
@@ -187,7 +187,7 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
 
   // find first sphere as a baseline
   __m256 lowest_t_vals = sphere_hit(rays, &spheres[0], t_max);
-  __m256 hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, global::cmpneq);
+  __m256 hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, _CMP_NEQ_UQ);
 
   update_sphere_cluster(&closest_spheres, spheres[0], hit_loc);
 
@@ -195,7 +195,7 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
     __m256 new_t_vals = sphere_hit(rays, &spheres[i], t_max);
 
     // don't update on instances of no hits (hit locations all zeros)
-    hit_loc = _mm256_cmp_ps(new_t_vals, global::zeros, global::cmpneq);
+    hit_loc = _mm256_cmp_ps(new_t_vals, global::zeros, _CMP_NEQ_UQ);
     if (_mm256_testz_ps(hit_loc, hit_loc)) {
       continue;
     }
@@ -207,20 +207,20 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
     new_t_vals = _mm256_or_ps(new_t_vals, max_mask);
 
     // replace 0's with max for current lowest too
-    __m256 curr_no_hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, global::cmpeq);
+    __m256 curr_no_hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, _CMP_EQ_OQ);
     max_mask = _mm256_and_ps(curr_no_hit_loc, max);
     __m256 lowest_t_masked = _mm256_or_ps(lowest_t_vals, max_mask);
 
     // update sphere references based on where new
     // t values are closer than the current lowest
-    __m256 update_locs = _mm256_cmp_ps(new_t_vals, lowest_t_masked, global::cmplt);
+    __m256 update_locs = _mm256_cmp_ps(new_t_vals, lowest_t_masked, _CMP_LT_OS);
     update_sphere_cluster(&closest_spheres, spheres[i], update_locs);
 
     // update current lowest t values based on new t's, however, mask out
     // where we put float max values so that the t values still represent
     // no hits as 0.0
     lowest_t_vals = _mm256_min_ps(lowest_t_masked, new_t_vals);
-    __m256 actual_vals_loc = _mm256_cmp_ps(lowest_t_vals, max, global::cmpneq);
+    __m256 actual_vals_loc = _mm256_cmp_ps(lowest_t_vals, max, _CMP_NEQ_UQ);
     lowest_t_vals = _mm256_and_ps(lowest_t_vals, actual_vals_loc);
   }
 
