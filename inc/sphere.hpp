@@ -3,11 +3,25 @@
 #include "rand.hpp"
 #include "types.hpp"
 #include <cstdlib>
+#include <cwctype>
 #include <immintrin.h>
 #include <limits>
 #include <vector>
 
-static std::vector<Sphere> spheres;
+struct alignas(32) Sphere {
+  Vec3 center;
+  Material mat;
+  float r;
+};
+
+struct SphereCluster {
+  Vec3_256 center;
+  Material_256 mat;
+  __m256 r;
+};
+
+static std::vector<Sphere> spheres; // TODO make this more dynamic like in the original rt in a weekend
+
 inline static void init_spheres() {
   spheres.reserve(488);
   spheres = {
