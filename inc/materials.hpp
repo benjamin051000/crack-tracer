@@ -7,6 +7,17 @@
 #include "types.hpp"
 #include "colors.hpp"
 
+enum MatType {
+  metallic,
+  lambertian,
+  dielectric,
+};
+
+struct alignas(16) Material {
+  Color atten;
+  MatType type;
+};
+
 namespace {
 
 using namespace colors;
@@ -40,7 +51,7 @@ alignas(32) constexpr int dielectric_types[8] = {
     MatType::dielectric, MatType::dielectric, MatType::dielectric, MatType::dielectric,
 };
 
-LCGRand lcg_rand;
+LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread_local?
 
 [[gnu::always_inline]] inline void scatter_metallic(RayCluster* rays, const HitRecords* hit_rec) {
   Vec3_256 reflected = reflect(&rays->dir, &hit_rec->norm);

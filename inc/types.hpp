@@ -1,24 +1,12 @@
 #pragma once
+#include <immintrin.h>
 #include "colors.hpp"
 #include "vec.hpp"
-#include <immintrin.h>
 
-using namespace colors;
-
-enum MatType {
-  metallic,
-  lambertian,
-  dielectric,
-};
-
+// TODO move out of here
 struct Material_256 {
   Color_256 atten;
   __m256i type;
-};
-
-struct alignas(16) Material {
-  Color atten;
-  MatType type;
 };
 
 struct RayCluster {
