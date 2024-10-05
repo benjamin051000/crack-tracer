@@ -1,7 +1,7 @@
 #include "camera.hpp"
 
 void Camera::register_key_event(const SDL_Event e) {
-  const uint32_t key = e.key.keysym.sym;
+  const auto key = e.key.keysym.sym;
 
   if (e.type == SDL_KEYDOWN) {
     switch (key) {

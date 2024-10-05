@@ -17,7 +17,11 @@ constexpr unsigned img_width = 1920;
 constexpr unsigned img_height = 1080;
 constexpr unsigned thread_count = 12;
 constexpr unsigned ray_depth = 20;
+
+static_assert(img_height % thread_count == 0, "Thread count must divide rows equally.");
 }
+
+
 
 namespace global {
 // each group calculates 8 samples.
@@ -47,6 +51,8 @@ constexpr __m256 zeros = {0, 0, 0, 0, 0, 0, 0, 0};
 constexpr __m256 ones = {1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f};
 
 const __m256i all_set = (__m256i)_mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ); // TODO replace with the predefined ones (cmpeq)
+
+static_assert(sample_group_num > 0, "there must be at least one group of ray samples to calculate");
 } // namespace global
 
 namespace { // simply to remove the need for `static` on all these methods.
@@ -56,5 +62,5 @@ namespace { // simply to remove the need for `static` on all these methods.
   f_val += 1 << 23;
   return ((uint32_t)f_val) & 0x007FFFFF; // TODO use a safer cast... bit_cast?
 }
-
 } // end of namespace (anonymous)
+
