@@ -22,7 +22,8 @@ struct SphereCluster {
 
 static std::vector<Sphere> spheres; // TODO make this more dynamic like in the original rt in a weekend
 
-inline static void init_spheres() {
+namespace {
+[[gnu::always_inline]] inline void init_spheres() noexcept {
   spheres.reserve(488);
   spheres = {
       {{.center = {.x = -1.f, .y = 1.f, .z = -2.5f}, .mat = red_lambertian, .r = 1.f},
@@ -68,7 +69,7 @@ inline static void init_spheres() {
 
 // Returns hit t values or 0 depending on if this ray hit this sphere or not
 [[nodiscard, gnu::always_inline]] 
-inline static __m256 sphere_hit(
+inline __m256 sphere_hit(
 	const RayCluster& rays,
 	const Sphere& sphere,
 	const float t_max
@@ -122,7 +123,7 @@ inline static __m256 sphere_hit(
 }
 
 [[gnu::always_inline]]
-inline static void set_face_normal(
+inline void set_face_normal(
 	const RayCluster& rays,
 	HitRecords& hit_rec, 
 	const Vec3_256& outward_norm
@@ -133,25 +134,32 @@ inline static void set_face_normal(
   hit_rec.norm = blend_vec256(hit_rec.norm, outward_norm, hit_rec.front_face);
 }
 
-inline static void create_hit_record(HitRecords& hit_rec, const RayCluster& rays,
-                                     SphereCluster* sphere_cluster, __m256 t_vals) {
+[[gnu::always_inline]] inline void create_hit_record(
+	HitRecords& hit_rec,
+	const RayCluster& rays, 
+	const SphereCluster& sphere_cluster,
+	const __m256& t_vals
+) noexcept {
   hit_rec.t = t_vals;
-  hit_rec.mat = sphere_cluster->mat;
+  hit_rec.mat = sphere_cluster.mat;
 
   hit_rec.orig.x = _mm256_fmadd_ps(rays.dir.x, t_vals, rays.orig.x);
   hit_rec.orig.y = _mm256_fmadd_ps(rays.dir.y, t_vals, rays.orig.y);
   hit_rec.orig.z = _mm256_fmadd_ps(rays.dir.z, t_vals, rays.orig.z);
 
-  Vec3_256 norm = hit_rec.orig - sphere_cluster->center;
+  Vec3_256 norm = hit_rec.orig - sphere_cluster.center;
   // normalize
-  norm /= sphere_cluster->r;
+  norm /= sphere_cluster.r;
 
   set_face_normal(rays, hit_rec, norm);
 }
 
 // updates a sphere cluster with a sphere given a mask of where to insert the new sphere's values
-inline static void update_sphere_cluster(SphereCluster& curr_cluster, Sphere& curr_sphere,
-                                         __m256& update_mask) {
+[[gnu::always_inline]] inline void update_sphere_cluster(
+	SphereCluster& curr_cluster,
+	const Sphere& curr_sphere, 
+	const __m256& update_mask
+) noexcept {
 
   if (_mm256_testz_ps(update_mask, update_mask)) {
     return;
@@ -194,7 +202,11 @@ inline static void update_sphere_cluster(SphereCluster& curr_cluster, Sphere& cu
   curr_cluster.r = new_spheres.r + curr_spheres.r;
 };
 
-[[gnu::always_inline]] inline static void find_sphere_hits(HitRecords& hit_rec, const RayCluster& rays, float t_max) {
+[[gnu::always_inline]] inline void find_sphere_hits(
+	HitRecords& hit_rec,
+	const RayCluster& rays,
+	const float t_max
+) noexcept {
 
   SphereCluster closest_spheres = {
       .center =
@@ -248,5 +260,7 @@ inline static void update_sphere_cluster(SphereCluster& curr_cluster, Sphere& cu
     lowest_t_vals = _mm256_and_ps(lowest_t_vals, actual_vals_loc);
   }
 
-  create_hit_record(hit_rec, rays, &closest_spheres, lowest_t_vals);
+  create_hit_record(hit_rec, rays, closest_spheres, lowest_t_vals);
 }
+
+} // end of namespace (anonymous)
