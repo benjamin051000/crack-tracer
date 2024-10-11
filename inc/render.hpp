@@ -12,15 +12,16 @@
 #include <cstdio>
 #include <future>
 #include <immintrin.h>
+#include <limits>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
 namespace {
 [[gnu::always_inline]] inline void update_colors(Color_256& curr_colors, const Color_256& new_colors,
-                                 __m256 update_mask) {
+                                 const __m256& update_mask) {
 
-  __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, (__m256)global::all_set);
-  __m256 preserve_curr = _mm256_and_ps(global::ones, new_no_hit_mask);
+  const __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, (__m256)global::all_set);
+  const __m256 preserve_curr = _mm256_and_ps(global::ones, new_no_hit_mask);
 
   // multiply current colors by the attenuation of new hits.
   // fill 1.0 for no hits in order to preserve current colors when multiplying
@@ -36,20 +37,20 @@ namespace {
   HitRecords hit_rec;
   hit_rec.front_face = global::zeros;
 
-  Color_256 colors{
-      .x = global::ones,
-      .y = global::ones,
-      .z = global::ones,
+  Color_256 colors {
+      global::ones,
+      global::ones,
+      global::ones,
   };
 
-  for (int i = 0; i < config::ray_depth; i++) {
+  for (unsigned i = 0; i < config::ray_depth; i++) {
 
-    find_sphere_hits(hit_rec, rays, INFINITY);
+    find_sphere_hits(hit_rec, rays, std::numeric_limits<float>::max());
 
     // or a mask when a value is not a hit, at any point.
     // if all are zero, break
-    __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, _CMP_NLE_US);
-    __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, (__m256)global::all_set);
+    const __m256 new_hit_mask = _mm256_cmp_ps(hit_rec.t, global::zeros, _CMP_NLE_US);
+    const __m256 new_no_hit_mask = _mm256_xor_ps(new_hit_mask, (__m256)global::all_set);
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
     if (_mm256_testz_ps(new_hit_mask, new_hit_mask)) {
@@ -70,32 +71,32 @@ namespace {
 [[gnu::always_inline]] inline void write_out_color_buf(const Color* color_buf, CharColor* img_buf,
                                        uint32_t write_pos) {
 
-  __m256 cm = _mm256_broadcast_ss(&global::color_multiplier);
-  __m256 colors_1_f32 = _mm256_load_ps((float*)color_buf) * cm;
-  __m256 colors_2_f32 = _mm256_load_ps((float*)(color_buf) + 8) * cm;
-  __m256 colors_3_f32 = _mm256_load_ps((float*)(color_buf) + 16) * cm;
-  __m256 colors_4_f32 = _mm256_load_ps((float*)(color_buf) + 24) * cm;
-  __m256 colors_5_f32 = _mm256_load_ps((float*)(color_buf) + 32) * cm;
-  __m256 colors_6_f32 = _mm256_load_ps((float*)(color_buf) + 40) * cm;
-  __m256 colors_7_f32 = _mm256_load_ps((float*)(color_buf) + 48) * cm;
-  __m256 colors_8_f32 = _mm256_load_ps((float*)(color_buf) + 56) * cm;
-  __m256 colors_9_f32 = _mm256_load_ps((float*)(color_buf) + 64) * cm;
-  __m256 colors_10_f32 = _mm256_load_ps((float*)(color_buf) + 72) * cm;
-  __m256 colors_11_f32 = _mm256_load_ps((float*)(color_buf) + 80) * cm;
-  __m256 colors_12_f32 = _mm256_load_ps((float*)(color_buf) + 88) * cm;
+  const __m256 cm = _mm256_broadcast_ss(&global::color_multiplier);
+  const __m256 colors_1_f32 = _mm256_load_ps((float*)color_buf) * cm;
+  const __m256 colors_2_f32 = _mm256_load_ps((float*)(color_buf) + 8) * cm;
+  const __m256 colors_3_f32 = _mm256_load_ps((float*)(color_buf) + 16) * cm;
+  const __m256 colors_4_f32 = _mm256_load_ps((float*)(color_buf) + 24) * cm;
+  const __m256 colors_5_f32 = _mm256_load_ps((float*)(color_buf) + 32) * cm;
+  const __m256 colors_6_f32 = _mm256_load_ps((float*)(color_buf) + 40) * cm;
+  const __m256 colors_7_f32 = _mm256_load_ps((float*)(color_buf) + 48) * cm;
+  const __m256 colors_8_f32 = _mm256_load_ps((float*)(color_buf) + 56) * cm;
+  const __m256 colors_9_f32 = _mm256_load_ps((float*)(color_buf) + 64) * cm;
+  const __m256 colors_10_f32 = _mm256_load_ps((float*)(color_buf) + 72) * cm;
+  const __m256 colors_11_f32 = _mm256_load_ps((float*)(color_buf) + 80) * cm;
+  const __m256 colors_12_f32 = _mm256_load_ps((float*)(color_buf) + 88) * cm;
 
-  __m256i colors_1_i32 = _mm256_cvtps_epi32(colors_1_f32);
-  __m256i colors_2_i32 = _mm256_cvtps_epi32(colors_2_f32);
-  __m256i colors_3_i32 = _mm256_cvtps_epi32(colors_3_f32);
-  __m256i colors_4_i32 = _mm256_cvtps_epi32(colors_4_f32);
-  __m256i colors_5_i32 = _mm256_cvtps_epi32(colors_5_f32);
-  __m256i colors_6_i32 = _mm256_cvtps_epi32(colors_6_f32);
-  __m256i colors_7_i32 = _mm256_cvtps_epi32(colors_7_f32);
-  __m256i colors_8_i32 = _mm256_cvtps_epi32(colors_8_f32);
-  __m256i colors_9_i32 = _mm256_cvtps_epi32(colors_9_f32);
-  __m256i colors_10_i32 = _mm256_cvtps_epi32(colors_10_f32);
-  __m256i colors_11_i32 = _mm256_cvtps_epi32(colors_11_f32);
-  __m256i colors_12_i32 = _mm256_cvtps_epi32(colors_12_f32);
+  const __m256i colors_1_i32 = _mm256_cvtps_epi32(colors_1_f32);
+  const __m256i colors_2_i32 = _mm256_cvtps_epi32(colors_2_f32);
+  const __m256i colors_3_i32 = _mm256_cvtps_epi32(colors_3_f32);
+  const __m256i colors_4_i32 = _mm256_cvtps_epi32(colors_4_f32);
+  const __m256i colors_5_i32 = _mm256_cvtps_epi32(colors_5_f32);
+  const __m256i colors_6_i32 = _mm256_cvtps_epi32(colors_6_f32);
+  const __m256i colors_7_i32 = _mm256_cvtps_epi32(colors_7_f32);
+  const __m256i colors_8_i32 = _mm256_cvtps_epi32(colors_8_f32);
+  const __m256i colors_9_i32 = _mm256_cvtps_epi32(colors_9_f32);
+  const __m256i colors_10_i32 = _mm256_cvtps_epi32(colors_10_f32);
+  const __m256i colors_11_i32 = _mm256_cvtps_epi32(colors_11_f32);
+  const __m256i colors_12_i32 = _mm256_cvtps_epi32(colors_12_f32);
 
   const uint8_t BOTH_LOW_XMMWORD = 32;
   const uint8_t BOTH_HIGH_XMMWORD = 49;
@@ -108,12 +109,9 @@ namespace {
   __m256i temp_permute_7 = _mm256_permute2x128_si256(colors_7_i32, colors_8_i32, BOTH_LOW_XMMWORD);
   __m256i temp_permute_8 = _mm256_permute2x128_si256(colors_7_i32, colors_8_i32, BOTH_HIGH_XMMWORD);
   __m256i temp_permute_9 = _mm256_permute2x128_si256(colors_9_i32, colors_10_i32, BOTH_LOW_XMMWORD);
-  __m256i temp_permute_10 =
-      _mm256_permute2x128_si256(colors_9_i32, colors_10_i32, BOTH_HIGH_XMMWORD);
-  __m256i temp_permute_11 =
-      _mm256_permute2x128_si256(colors_11_i32, colors_12_i32, BOTH_LOW_XMMWORD);
-  __m256i temp_permute_12 =
-      _mm256_permute2x128_si256(colors_11_i32, colors_12_i32, BOTH_HIGH_XMMWORD);
+  __m256i temp_permute_10 = _mm256_permute2x128_si256(colors_9_i32, colors_10_i32, BOTH_HIGH_XMMWORD);
+  __m256i temp_permute_11 = _mm256_permute2x128_si256(colors_11_i32, colors_12_i32, BOTH_LOW_XMMWORD);
+  __m256i temp_permute_12 = _mm256_permute2x128_si256(colors_11_i32, colors_12_i32, BOTH_HIGH_XMMWORD);
 
   __m256i colors_1_i16 = _mm256_packs_epi32(temp_permute_1, temp_permute_2);
   __m256i colors_2_i16 = _mm256_packs_epi32(temp_permute_3, temp_permute_4);
@@ -158,7 +156,7 @@ namespace {
   }
 }
 
-[[gnu::always_inline]] inline void render(CharColor* img_buf, const Vec3 cam_origin, uint32_t pix_offset) {
+[[gnu::always_inline]] inline void render(CharColor *const img_buf, const Vec3 cam_origin, const uint32_t pix_offset) noexcept {
   // comptime generated
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
@@ -231,8 +229,7 @@ using namespace std::chrono;
 
 [[gnu::always_inline]] inline void render_png() {
 
-  CharColor* img_data =
-      (CharColor*)aligned_alloc(32, config::img_width * config::img_height * sizeof(CharColor));
+  CharColor *img_data = static_cast<CharColor*>(aligned_alloc(32, config::img_width * config::img_height * sizeof(CharColor)));
   init_spheres();
   std::array<std::future<void>, config::thread_count> futures;
   Camera cam;
