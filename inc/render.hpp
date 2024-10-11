@@ -16,7 +16,7 @@
 #include <stb_image_write.h>
 
 namespace {
-[[gnu::always_inline]] inline void update_colors(Color_256* curr_colors, const Color_256* new_colors,
+[[gnu::always_inline]] inline void update_colors(Color_256& curr_colors, const Color_256& new_colors,
                                  __m256 update_mask) {
 
   __m256 new_no_hit_mask = _mm256_xor_ps(update_mask, (__m256)global::all_set);
@@ -24,10 +24,10 @@ namespace {
 
   // multiply current colors by the attenuation of new hits.
   // fill 1.0 for no hits in order to preserve current colors when multiplying
-  *curr_colors *= ((*new_colors & update_mask) + preserve_curr);
+  curr_colors *= ((new_colors & update_mask) + preserve_curr);
 }
 
-[[gnu::always_inline]] inline Color_256 ray_cluster_colors(RayCluster* rays) {
+[[gnu::always_inline]] inline Color_256 ray_cluster_colors(RayCluster& rays) {
   // will be used to add a sky tint to rays that at some point bounce off into space.
   // if a ray never bounces away (within amount of bounces set by depth), the
   // hit_mask will be all set (packed floats) and the sky tint will not affect its final color
@@ -44,7 +44,7 @@ namespace {
 
   for (int i = 0; i < config::ray_depth; i++) {
 
-    find_sphere_hits(&hit_rec, rays, INFINITY);
+    find_sphere_hits(hit_rec, rays, INFINITY);
 
     // or a mask when a value is not a hit, at any point.
     // if all are zero, break
@@ -53,13 +53,13 @@ namespace {
 
     no_hit_mask = _mm256_or_ps(no_hit_mask, new_no_hit_mask);
     if (_mm256_testz_ps(new_hit_mask, new_hit_mask)) {
-      update_colors(&colors, &background_color, no_hit_mask);
+      update_colors(colors, background_color, no_hit_mask);
       break;
     }
 
-    scatter(rays, &hit_rec);
+    scatter(rays, hit_rec);
 
-    update_colors(&colors, &hit_rec.mat.atten, new_hit_mask);
+    update_colors(colors, hit_rec.mat.atten, new_hit_mask);
   }
 
   return colors;
@@ -192,7 +192,7 @@ namespace {
         __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
         samples.dir.y += y_scale_vec;
 
-        sample_color += ray_cluster_colors(&samples);
+        sample_color += ray_cluster_colors(samples);
       }
 
       // accumulate all color channels into first float of vec

@@ -67,17 +67,21 @@ inline static void init_spheres() {
 }
 
 // Returns hit t values or 0 depending on if this ray hit this sphere or not
-[[nodiscard]] inline static __m256 sphere_hit(const RayCluster* rays, const Sphere* sphere,
-                                              float t_max) {
+[[nodiscard, gnu::always_inline]] 
+inline static __m256 sphere_hit(
+	const RayCluster& rays,
+	const Sphere& sphere,
+	const float t_max
+) noexcept {
 
-  Vec3_256 sphere_center = broadcast_vec(&sphere->center);
-  Vec3_256 oc = sphere_center - rays->orig;
-  float rad_2 = sphere->r * sphere->r;
+  Vec3_256 sphere_center = broadcast_vec(&sphere.center);
+  Vec3_256 oc = sphere_center - rays.orig;
+  float rad_2 = sphere.r * sphere.r;
   __m256 rad_2_vec = _mm256_broadcast_ss(&rad_2);
 
-  __m256 a = dot(&rays->dir, &rays->dir);
-  __m256 b = dot(&rays->dir, &oc);
-  __m256 c = dot(&oc, &oc) - rad_2_vec;
+  __m256 a = dot(rays.dir, rays.dir);
+  __m256 b = dot(rays.dir, oc);
+  __m256 c = dot(oc, oc) - rad_2_vec;
 
   __m256 discrim = _mm256_fmsub_ps(b, b, a * c);
 
@@ -106,7 +110,7 @@ inline static void init_spheres() {
   // Only clear materials can have another root thats worth finding.
   // This is why i only check for the farther out hit value if the material
   // is dielectric.
-  if (_mm256_testz_ps(hit_loc, hit_loc) && sphere->mat.type == dielectric) {
+  if (_mm256_testz_ps(hit_loc, hit_loc) && sphere.mat.type == dielectric) {
     root = (b + sqrt_d) * recip_a;
     below_max = _mm256_cmp_ps(root, t_max_vec, _CMP_LT_OS);
     above_min = _mm256_cmp_ps(root, global::t_min_vec, _CMP_NLT_US);
@@ -117,33 +121,37 @@ inline static void init_spheres() {
   return root;
 }
 
-inline static void set_face_normal(const RayCluster* rays, HitRecords* hit_rec,
-                                   const Vec3_256* outward_norm) {
-  __m256 ray_norm_dot = dot(&rays->dir, outward_norm);
-  hit_rec->front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), _CMP_LT_OS);
-  hit_rec->norm = -*outward_norm;
-  hit_rec->norm = blend_vec256(&hit_rec->norm, outward_norm, hit_rec->front_face);
+[[gnu::always_inline]]
+inline static void set_face_normal(
+	const RayCluster& rays,
+	HitRecords& hit_rec, 
+	const Vec3_256& outward_norm
+) noexcept {
+  const __m256 ray_norm_dot = dot(rays.dir, outward_norm);
+  hit_rec.front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), _CMP_LT_OS);
+  hit_rec.norm = -outward_norm;
+  hit_rec.norm = blend_vec256(hit_rec.norm, outward_norm, hit_rec.front_face);
 }
 
-inline static void create_hit_record(HitRecords* hit_rec, const RayCluster* rays,
+inline static void create_hit_record(HitRecords& hit_rec, const RayCluster& rays,
                                      SphereCluster* sphere_cluster, __m256 t_vals) {
-  hit_rec->t = t_vals;
-  hit_rec->mat = sphere_cluster->mat;
+  hit_rec.t = t_vals;
+  hit_rec.mat = sphere_cluster->mat;
 
-  hit_rec->orig.x = _mm256_fmadd_ps(rays->dir.x, t_vals, rays->orig.x);
-  hit_rec->orig.y = _mm256_fmadd_ps(rays->dir.y, t_vals, rays->orig.y);
-  hit_rec->orig.z = _mm256_fmadd_ps(rays->dir.z, t_vals, rays->orig.z);
+  hit_rec.orig.x = _mm256_fmadd_ps(rays.dir.x, t_vals, rays.orig.x);
+  hit_rec.orig.y = _mm256_fmadd_ps(rays.dir.y, t_vals, rays.orig.y);
+  hit_rec.orig.z = _mm256_fmadd_ps(rays.dir.z, t_vals, rays.orig.z);
 
-  Vec3_256 norm = hit_rec->orig - sphere_cluster->center;
+  Vec3_256 norm = hit_rec.orig - sphere_cluster->center;
   // normalize
   norm /= sphere_cluster->r;
 
-  set_face_normal(rays, hit_rec, &norm);
+  set_face_normal(rays, hit_rec, norm);
 }
 
 // updates a sphere cluster with a sphere given a mask of where to insert the new sphere's values
-inline static void update_sphere_cluster(SphereCluster* curr_cluster, Sphere curr_sphere,
-                                         __m256 update_mask) {
+inline static void update_sphere_cluster(SphereCluster& curr_cluster, Sphere& curr_sphere,
+                                         __m256& update_mask) {
 
   if (_mm256_testz_ps(update_mask, update_mask)) {
     return;
@@ -170,23 +178,23 @@ inline static void update_sphere_cluster(SphereCluster* curr_cluster, Sphere cur
   __m256 preserve_curr = _mm256_xor_ps(update_mask, (__m256)global::all_set);
 
   SphereCluster curr_spheres = {
-      .center = curr_cluster->center & preserve_curr,
+      .center = curr_cluster.center & preserve_curr,
       .mat =
           {
-              .atten = curr_cluster->mat.atten & preserve_curr,
-              .type = _mm256_and_si256(curr_cluster->mat.type, (__m256i)preserve_curr),
+              .atten = curr_cluster.mat.atten & preserve_curr,
+              .type = _mm256_and_si256(curr_cluster.mat.type, (__m256i)preserve_curr),
           },
-      .r = _mm256_and_ps(curr_cluster->r, preserve_curr),
+      .r = _mm256_and_ps(curr_cluster.r, preserve_curr),
 
   };
 
-  curr_cluster->center = new_spheres.center + curr_spheres.center;
-  curr_cluster->mat.atten = new_spheres.mat.atten + curr_spheres.mat.atten;
-  curr_cluster->mat.type = new_spheres.mat.type + curr_spheres.mat.type;
-  curr_cluster->r = new_spheres.r + curr_spheres.r;
+  curr_cluster.center = new_spheres.center + curr_spheres.center;
+  curr_cluster.mat.atten = new_spheres.mat.atten + curr_spheres.mat.atten;
+  curr_cluster.mat.type = new_spheres.mat.type + curr_spheres.mat.type;
+  curr_cluster.r = new_spheres.r + curr_spheres.r;
 };
 
-inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays, float t_max) {
+[[gnu::always_inline]] inline static void find_sphere_hits(HitRecords& hit_rec, const RayCluster& rays, float t_max) {
 
   SphereCluster closest_spheres = {
       .center =
@@ -202,13 +210,13 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
   __m256 max = _mm256_broadcast_ss(&flt_max);
 
   // find first sphere as a baseline
-  __m256 lowest_t_vals = sphere_hit(rays, &spheres[0], t_max);
+  __m256 lowest_t_vals = sphere_hit(rays, spheres[0], t_max);
   __m256 hit_loc = _mm256_cmp_ps(lowest_t_vals, global::zeros, _CMP_NEQ_UQ);
 
-  update_sphere_cluster(&closest_spheres, spheres[0], hit_loc);
+  update_sphere_cluster(closest_spheres, spheres[0], hit_loc);
 
   for (size_t i = 1; i < spheres.size(); i++) {
-    __m256 new_t_vals = sphere_hit(rays, &spheres[i], t_max);
+    __m256 new_t_vals = sphere_hit(rays, spheres[i], t_max);
 
     // don't update on instances of no hits (hit locations all zeros)
     hit_loc = _mm256_cmp_ps(new_t_vals, global::zeros, _CMP_NEQ_UQ);
@@ -230,7 +238,7 @@ inline static void find_sphere_hits(HitRecords* hit_rec, const RayCluster* rays,
     // update sphere references based on where new
     // t values are closer than the current lowest
     __m256 update_locs = _mm256_cmp_ps(new_t_vals, lowest_t_masked, _CMP_LT_OS);
-    update_sphere_cluster(&closest_spheres, spheres[i], update_locs);
+    update_sphere_cluster(closest_spheres, spheres[i], update_locs);
 
     // update current lowest t values based on new t's, however, mask out
     // where we put float max values so that the t values still represent
