@@ -11,6 +11,123 @@ struct _Vec3 {
 // TODO Default template typenames don't work?? Maybe they actually do... :shrug: try it later
 struct Vec3_256 {
   __m256 x, y, z;
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator+(const Vec3_256& b) const noexcept {
+  return Vec3_256 {
+      _mm256_add_ps(x, b.x),
+      _mm256_add_ps(y, b.y),
+      _mm256_add_ps(z, b.z),
+  };
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator+(const __m256& b) const noexcept {
+  return Vec3_256{
+      _mm256_add_ps(x, b),
+      _mm256_add_ps(y, b),
+      _mm256_add_ps(z, b),
+  };
+}
+
+[[gnu::always_inline]] inline Vec3_256& operator+=(const Vec3_256& b) noexcept {
+  x = _mm256_add_ps(x, b.x);
+  y = _mm256_add_ps(y, b.y);
+  z = _mm256_add_ps(z, b.z);
+  return *this;
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator-(const Vec3_256& b) const noexcept {
+  return Vec3_256{
+      _mm256_sub_ps(x, b.x),
+      _mm256_sub_ps(y, b.y),
+      _mm256_sub_ps(z, b.z),
+  };
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256& operator-=(const Vec3_256& b) noexcept {
+  x = _mm256_sub_ps(x, b.x);
+  y = _mm256_sub_ps(y, b.y);
+  z = _mm256_sub_ps(z, b.z);
+  return *this;
+}
+
+	/** Inverse
+	* Multiplies by -1
+	*/
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator-() const noexcept {
+  const __m256 negative_one = _mm256_sub_ps(_mm256_setzero_ps(), global::ones);
+  return Vec3_256 {
+      _mm256_mul_ps(x, negative_one),
+      _mm256_mul_ps(y, negative_one),
+      _mm256_mul_ps(z, negative_one),
+  };
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator*(const Vec3_256& b) const noexcept {
+  return Vec3_256 {
+      _mm256_mul_ps(x, b.x),
+      _mm256_mul_ps(y, b.y),
+      _mm256_mul_ps(z, b.z),
+  };
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator*(const __m256& b) const noexcept {
+  return Vec3_256 {
+      _mm256_mul_ps(x, b),
+      _mm256_mul_ps(y, b),
+      _mm256_mul_ps(z, b),
+  };
+}
+
+[[gnu::always_inline]] inline Vec3_256& operator*=(const Vec3_256& b) noexcept {
+  x = _mm256_mul_ps(x, b.x);
+  y = _mm256_mul_ps(y, b.y);
+  z = _mm256_mul_ps(z, b.z);
+  return *this;
+}
+
+[[gnu::always_inline]] inline Vec3_256& operator*=(const __m256& b) noexcept {
+  x = _mm256_mul_ps(x, b);
+  y = _mm256_mul_ps(y, b);
+  z = _mm256_mul_ps(z, b);
+  return *this;
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator/(const Vec3_256& b) const noexcept {
+  const Vec3_256 rcp_b {
+      _mm256_rcp_ps(b.x),
+      _mm256_rcp_ps(b.y),
+      _mm256_rcp_ps(b.z),
+  };
+
+  return Vec3_256 {
+      _mm256_mul_ps(x, rcp_b.x),
+      _mm256_mul_ps(y, rcp_b.y),
+      _mm256_mul_ps(z, rcp_b.z),
+  };
+}
+
+[[gnu::always_inline]] inline Vec3_256& operator/=(const __m256& b) noexcept {
+  const __m256 rcp_b = _mm256_rcp_ps(b);
+  x = _mm256_mul_ps(x, rcp_b);
+  y = _mm256_mul_ps(y, rcp_b);
+  z = _mm256_mul_ps(z, rcp_b);
+  return *this;
+}
+
+[[nodiscard, gnu::always_inline]] inline Vec3_256 operator&(const __m256& b) const noexcept {
+  return Vec3_256 {
+      _mm256_and_ps(x, b),
+      _mm256_and_ps(y, b),
+      _mm256_and_ps(z, b),
+  };
+}
+
+[[gnu::always_inline]] inline Vec3_256& operator&=(const __m256& b) noexcept {
+  x = _mm256_and_ps(x, b);
+  y = _mm256_and_ps(y, b);
+  z = _mm256_and_ps(z, b);
+  return *this;
+}
 };
 
 using Vec3 = _Vec3<float>;
@@ -19,121 +136,9 @@ using CharColor = _Vec3<uint8_t>;
 
 namespace { // simply to remove the need for `static` on all these methods.
 
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator+(const Vec3_256& a, const Vec3_256& b) noexcept {
-  return Vec3_256{
-      .x = _mm256_add_ps(a.x, b.x),
-      .y = _mm256_add_ps(a.y, b.y),
-      .z = _mm256_add_ps(a.z, b.z),
-  };
-}
 
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator+(const Vec3_256& a, const __m256& b) noexcept {
-  return Vec3_256{
-      _mm256_add_ps(a.x, b),
-      _mm256_add_ps(a.y, b),
-      _mm256_add_ps(a.z, b),
-  };
-}
 
-[[gnu::always_inline]] inline Vec3_256& operator+=(Vec3_256& a, const Vec3_256& b) noexcept {
-  a.x = _mm256_add_ps(a.x, b.x);
-  a.y = _mm256_add_ps(a.y, b.y);
-  a.z = _mm256_add_ps(a.z, b.z);
-  return a;
-}
 
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator-(const Vec3_256& a, const Vec3_256& b) noexcept {
-  return Vec3_256{
-      _mm256_sub_ps(a.x, b.x),
-      _mm256_sub_ps(a.y, b.y),
-      _mm256_sub_ps(a.z, b.z),
-  };
-}
-
-[[nodiscard, gnu::always_inline]] inline Vec3_256& operator-=(Vec3_256& a, const Vec3_256& b) noexcept {
-  a.x = _mm256_sub_ps(a.x, b.x);
-  a.y = _mm256_sub_ps(a.y, b.y);
-  a.z = _mm256_sub_ps(a.z, b.z);
-  return a;
-}
-
-// inverse
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator-(const Vec3_256& a) noexcept {
-  // -1
-  const __m256 invert = _mm256_sub_ps(_mm256_setzero_ps(), global::ones);
-  return Vec3_256 {
-      _mm256_mul_ps(a.x, invert),
-      _mm256_mul_ps(a.y, invert),
-      _mm256_mul_ps(a.z, invert),
-  };
-}
-
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator*(const Vec3_256& a, const Vec3_256& b) noexcept {
-  return Vec3_256 {
-      _mm256_mul_ps(a.x, b.x),
-      _mm256_mul_ps(a.y, b.y),
-      _mm256_mul_ps(a.z, b.z),
-  };
-}
-
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator*(const Vec3_256& a, const __m256& b) noexcept {
-  return Vec3_256 {
-      _mm256_mul_ps(a.x, b),
-      _mm256_mul_ps(a.y, b),
-      _mm256_mul_ps(a.z, b),
-  };
-}
-
-[[gnu::always_inline]] inline Vec3_256& operator*=(Vec3_256& a, const Vec3_256& b) noexcept {
-  a.x = _mm256_mul_ps(a.x, b.x);
-  a.y = _mm256_mul_ps(a.y, b.y);
-  a.z = _mm256_mul_ps(a.z, b.z);
-  return a;
-}
-
-[[gnu::always_inline]] inline Vec3_256& operator*=(Vec3_256& a, const __m256& b) noexcept {
-  a.x = _mm256_mul_ps(a.x, b);
-  a.y = _mm256_mul_ps(a.y, b);
-  a.z = _mm256_mul_ps(a.z, b);
-  return a;
-}
-
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator/(const Vec3_256& a, const Vec3_256& b) noexcept {
-  const Vec3_256 rcp_b {
-      _mm256_rcp_ps(b.x),
-      _mm256_rcp_ps(b.y),
-      _mm256_rcp_ps(b.z),
-  };
-
-  return Vec3_256 {
-      _mm256_mul_ps(a.x, rcp_b.x),
-      _mm256_mul_ps(a.y, rcp_b.y),
-      _mm256_mul_ps(a.z, rcp_b.z),
-  };
-}
-
-[[gnu::always_inline]] inline Vec3_256& operator/=(Vec3_256& a, const __m256& b) noexcept {
-  const __m256 rcp_b = _mm256_rcp_ps(b);
-  a.x = _mm256_mul_ps(a.x, rcp_b);
-  a.y = _mm256_mul_ps(a.y, rcp_b);
-  a.z = _mm256_mul_ps(a.z, rcp_b);
-  return a;
-}
-
-[[nodiscard, gnu::always_inline]] inline Vec3_256 operator&(const Vec3_256& a, const __m256& b) noexcept {
-  return Vec3_256 {
-      _mm256_and_ps(a.x, b),
-      _mm256_and_ps(a.y, b),
-      _mm256_and_ps(a.z, b),
-  };
-}
-
-[[gnu::always_inline]] inline Vec3_256& operator&=(Vec3_256& a, const __m256& b) noexcept {
-  a.x = _mm256_and_ps(a.x, b);
-  a.y = _mm256_and_ps(a.y, b);
-  a.z = _mm256_and_ps(a.z, b);
-  return a;
-}
 
 [[nodiscard, gnu::always_inline]] inline __m256 dot(
 	const Vec3_256& a,
