@@ -1,5 +1,4 @@
 #pragma once
-#include "camera.hpp"
 #include "comptime.hpp"
 #include "globals.hpp"
 #include "materials.hpp"
@@ -7,14 +6,10 @@
 #include "types.hpp"
 #include "vec.hpp"
 #include <SDL2/SDL.h>
-#include <array>
-#include <chrono>
 #include <cstdint>
 #include <cstdio>
-#include <future>
 #include <immintrin.h>
 #include <limits>
-#include <ratio>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
@@ -201,7 +196,8 @@ namespace {
           __m256 x_scale_vec = _mm256_broadcast_ss(&x_scale);
           samples.dir.x = samples.dir.x + x_scale_vec;
 
-          float y_scale = (global::pix_dv * static_cast<float>(row)) + (sample_group * global::sample_dv);
+          float y_scale =
+              (global::pix_dv * static_cast<float>(row)) + (sample_group * global::sample_dv);
           __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
           samples.dir.y += y_scale_vec;
 
@@ -238,96 +234,6 @@ namespace {
       }
       write_pos += ((config::thread_count - 1) * write_chunk_size);
     }
-  }
-
-  using namespace std::chrono;
-
-  [[gnu::always_inline]] inline void render_png() {
-
-    CharColor* img_data = static_cast<CharColor*>(
-        aligned_alloc(32, config::img_width * config::img_height * sizeof(CharColor)));
-    init_spheres();
-    std::array<std::future<void>, config::thread_count> futures;
-    Camera cam;
-
-    auto start_time = system_clock::now();
-
-    for (size_t idx = 0; idx < config::thread_count; idx++) {
-      futures[idx] =
-          std::async(std::launch::async, render, img_data, cam.origin, idx * config::img_width);
-    }
-
-    for (size_t idx = 0; idx < config::thread_count; idx++) {
-      futures[idx].get();
-    }
-
-    auto end_time = system_clock::now();
-    auto dur = duration<float>(end_time - start_time);
-    float milli = static_cast<float>(duration_cast<microseconds>(dur).count()) / 1000.f;
-    printf("render time (ms): %f\n", milli);
-    stbi_write_png("out.png", config::img_width, config::img_height, 3, img_data,
-                   config::img_width * sizeof(CharColor));
-  }
-
-  [[gnu::always_inline]] inline void render_realtime() {
-    CharColor* img_data =
-        (CharColor*)aligned_alloc(32, config::img_width * config::img_height * sizeof(CharColor));
-    init_spheres();
-    std::array<std::future<void>, config::thread_count> futures{};
-    Camera cam;
-
-    SDL_Window* win = NULL;
-    SDL_Renderer* renderer = NULL;
-
-    int sdl_res = SDL_Init(SDL_INIT_VIDEO);
-
-    if (sdl_res < 0) {
-      printf("SDL initialization failed with status code: %d\n", sdl_res);
-      exit(EXIT_FAILURE);
-    }
-
-    win = SDL_CreateWindow("Crack Tracer", 100, 100, config::img_width, config::img_height, 0);
-    renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-
-    SDL_Texture* buffer =
-        SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING,
-                          config::img_width, config::img_height);
-
-    int pitch = config::img_width * sizeof(CharColor);
-
-    while (true) {
-      SDL_Event e;
-      if (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
-          break;
-        }
-        cam.register_key_event(e);
-      }
-
-      cam.update();
-
-      SDL_LockTexture(buffer, NULL, (void**)(&img_data), &pitch);
-
-      for (size_t idx = 0; idx < config::thread_count; idx++) {
-        futures[idx] =
-            std::async(std::launch::async, render, img_data, cam.origin, idx * config::img_width);
-      }
-
-      for (size_t idx = 0; idx < config::thread_count; idx++) {
-        futures[idx].get();
-      }
-
-      SDL_UnlockTexture(buffer);
-
-      SDL_RenderCopy(renderer, buffer, NULL, NULL);
-
-      // flip the backbuffer
-      SDL_RenderPresent(renderer);
-    }
-
-    SDL_DestroyTexture(buffer);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(win);
   }
 
 } // namespace

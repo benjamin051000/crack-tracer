@@ -3,15 +3,14 @@
 #include "vec.hpp"
 #include <immintrin.h>
 
-// TODO move out of here
-struct Material_256 {
-  Color_256 atten;
-  __m256i type;
-};
-
 struct RayCluster {
   Vec3_256 dir;
   Vec3_256 orig;
+};
+
+struct Material_256 {
+  Color_256 atten;
+  __m256i type;
 };
 
 struct HitRecords {
