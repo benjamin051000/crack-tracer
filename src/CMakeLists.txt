@@ -5,4 +5,6 @@ add_executable(
 	${PROJECT_NAME}
 
 	entry.cpp
+	camera.cpp
+	utils.cpp
 )
