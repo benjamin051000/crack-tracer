@@ -14,6 +14,7 @@
 #include <future>
 #include <immintrin.h>
 #include <limits>
+#include <ratio>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
@@ -196,11 +197,11 @@ namespace {
         for (sample_group = 0; sample_group < global::sample_group_num; sample_group++) {
           RayCluster samples = base_rays;
 
-          float x_scale = global::pix_du * col;
+          float x_scale = global::pix_du * static_cast<float>(col);
           __m256 x_scale_vec = _mm256_broadcast_ss(&x_scale);
           samples.dir.x = samples.dir.x + x_scale_vec;
 
-          float y_scale = (global::pix_dv * row) + (sample_group * global::sample_dv);
+          float y_scale = (global::pix_dv * static_cast<float>(row)) + (sample_group * global::sample_dv);
           __m256 y_scale_vec = _mm256_broadcast_ss(&y_scale);
           samples.dir.y += y_scale_vec;
 
@@ -262,7 +263,7 @@ namespace {
 
     auto end_time = system_clock::now();
     auto dur = duration<float>(end_time - start_time);
-    float milli = duration_cast<microseconds>(dur).count() / 1000.f;
+    float milli = static_cast<float>(duration_cast<microseconds>(dur).count()) / 1000.f;
     printf("render time (ms): %f\n", milli);
     stbi_write_png("out.png", config::img_width, config::img_height, 3, img_data,
                    config::img_width * sizeof(CharColor));

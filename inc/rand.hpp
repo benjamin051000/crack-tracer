@@ -10,7 +10,7 @@ public:
   };
 
   [[nodiscard, gnu::always_inline]] inline float rand_in_range(const float min, const float max) {
-    const float scale = lcg_rand() * rcp_rand_max;
+    const float scale = static_cast<float>(lcg_rand()) * rcp_rand_max;
     const float f = min + scale * (max - min);
     return f;
   }
@@ -31,10 +31,10 @@ public:
 private:
   static inline __m256i rseed_vec = comptime::init_rseed_arr();
   static inline uint32_t rseed = 0;
-  const __m256i r_a = _mm256_set1_epi32((uint32_t)11035152453u);
+  const __m256i r_a = _mm256_set1_epi32(static_cast<int>(11035152453));
   const __m256i r_b = _mm256_set1_epi32(12345u);
   const __m256i rand_max_vec = _mm256_set1_epi32(RAND_MAX);
-  static constexpr float rcp_rand_max = 1.f / RAND_MAX;
+  static constexpr float rcp_rand_max = 1.f / static_cast<float>(RAND_MAX);
 
   [[nodiscard, gnu::always_inline]] inline Vec3_256 rand_vec_in_cube() {
     constexpr float min = -1.0;
@@ -56,6 +56,6 @@ private:
 
   // scalar versions of rand generation
   [[nodiscard, gnu::always_inline]] inline int lcg_rand() {
-    return rseed = (rseed * 1103515245u + 12345u) & RAND_MAX;
+    return rseed = (rseed * 1103515245 + 12345) & RAND_MAX;
   }
 };

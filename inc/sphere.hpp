@@ -38,9 +38,9 @@ namespace {
       for (int b = -11; b < 11; b++) {
         float choose_mat = lcg_rand.rand_in_range(0, 1);
         Vec3 center = {
-            .x = a + lcg_rand.rand_in_range(0, 1),
+            .x = static_cast<float>(a) + lcg_rand.rand_in_range(0, 1),
             .y = 0.2f,
-            .z = b + 0.9f * lcg_rand.rand_in_range(0, 1),
+            .z = static_cast<float>(b) + 0.9f * lcg_rand.rand_in_range(0, 1),
         };
         if (choose_mat < 0.3) {
           // diffuse
@@ -50,7 +50,7 @@ namespace {
               .z = lcg_rand.rand_in_range(0, 1),
           };
           Material new_mat = {.atten = albedo, .type = MatType::lambertian};
-          spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2});
+          spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2f});
         } else if (choose_mat < 0.7) {
           // metal
           Color albedo = {
@@ -59,11 +59,11 @@ namespace {
               .z = lcg_rand.rand_in_range(0.5, 1),
           };
           Material new_mat = {.atten = albedo, .type = MatType::metallic};
-          spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2});
+          spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2f});
         } else {
           // glass
           Material new_mat = {.atten = white, .type = MatType::dielectric};
-          spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2});
+          spheres.push_back(Sphere{.center = center, .mat = new_mat, .r = 0.2f});
         }
       }
     }
@@ -203,6 +203,7 @@ namespace {
                 .y = global::zeros,
                 .z = global::zeros,
             },
+        .mat = Material_256{},
         .r = global::zeros,
     };
 
