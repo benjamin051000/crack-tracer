@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <immintrin.h>
 #include "globals.hpp"
 #include "rand.hpp"
@@ -54,13 +55,13 @@ alignas(32) constexpr int dielectric_types[8] = {
 LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread_local?
 
 [[gnu::always_inline]] inline void scatter_metallic(RayCluster& rays, const HitRecords& hit_rec) {
-  Vec3_256 reflected = reflect(rays.dir, hit_rec.norm);
-  normalize(reflected);
+  Vec3_256 reflected = rays.dir.reflect(hit_rec.norm);
+  reflected.normalize();
 
-  __m256 dp = dot(reflected, hit_rec.norm);
+  __m256 dp = reflected.dot(hit_rec.norm);
   __m256 greater_than_zero = _mm256_cmp_ps(dp, global::zeros, _CMP_NLE_US);
   rays.dir = reflected & greater_than_zero;
-};
+}
 
 [[nodiscard, gnu::always_inline]] inline __m256 near_zero(const Vec3_256* vec) {
   __m256 near_x = _mm256_cmp_ps(abs_256(vec->x), global::t_min_vec, _CMP_LT_OS);
@@ -68,7 +69,7 @@ LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread
   __m256 near_z = _mm256_cmp_ps(abs_256(vec->z), global::t_min_vec, _CMP_LT_OS);
 
   return _mm256_and_ps(near_x, _mm256_and_ps(near_y, near_z));
-};
+}
 
 [[gnu::always_inline]] inline void scatter_lambertian(RayCluster& rays, const HitRecords& hit_rec) {
   Vec3_256 rand_vec = lcg_rand.random_unit_vec();
@@ -100,11 +101,11 @@ LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread
 
   __m256 ri = _mm256_blendv_ps(global::ir_vec, global::rcp_ir_vec, hit_rec.front_face);
   Vec3_256 unit_dir = rays.dir;
-  normalize(unit_dir);
+  unit_dir.normalize();
 
   Vec3_256 inverse_unit_dir = -unit_dir;
 
-  __m256 cos_theta = dot(inverse_unit_dir, hit_rec.norm);
+  __m256 cos_theta = inverse_unit_dir.dot(hit_rec.norm);
   cos_theta = _mm256_min_ps(cos_theta, global::ones);
 
   __m256 sin_theta = _mm256_sqrt_ps(global::ones - cos_theta * cos_theta);
@@ -119,14 +120,14 @@ LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread
   __m256 reflection_loc = _mm256_xor_ps(refraction_loc, (__m256)global::all_set);
 
   if (!_mm256_testz_ps(refraction_loc, refraction_loc)) {
-    Vec3_256 refract_dir = refract(unit_dir, hit_rec.norm, ri);
-    rays.dir = blend_vec256(rays.dir, refract_dir, refraction_loc);
+    Vec3_256 refract_dir = unit_dir.refract(hit_rec.norm, ri);
+    rays.dir = rays.dir.blend_vec256(refract_dir, refraction_loc);
   }
   if (!_mm256_testz_ps(reflection_loc, reflection_loc)) {
-    Vec3_256 reflect_dir = reflect(unit_dir, hit_rec.norm);
+    Vec3_256 reflect_dir = unit_dir.reflect(hit_rec.norm);
 
     reflection_loc = _mm256_and_ps(reflection_loc, hit_rec.front_face);
-    rays.dir = blend_vec256(rays.dir, reflect_dir, reflection_loc);
+    rays.dir = rays.dir.blend_vec256(reflect_dir, reflection_loc);
   }
 }
 
@@ -146,8 +147,8 @@ LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread
     };
     scatter_metallic(metallic_rays, hit_rec);
 
-    rays.dir = blend_vec256(rays.dir, metallic_rays.dir, (__m256)metallic_loc);
-    rays.orig = blend_vec256(rays.orig, metallic_rays.orig, (__m256)metallic_loc);
+    rays.dir = rays.dir.blend_vec256(metallic_rays.dir, (__m256)metallic_loc);
+    rays.orig = rays.orig.blend_vec256(metallic_rays.orig, (__m256)metallic_loc);
   }
   if (!_mm256_testz_si256(lambertian_loc, lambertian_loc)) {
     RayCluster lambertian_rays = {
@@ -156,8 +157,8 @@ LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread
     };
     scatter_lambertian(lambertian_rays, hit_rec);
 
-    rays.dir = blend_vec256(rays.dir, lambertian_rays.dir, (__m256)lambertian_loc);
-    rays.orig = blend_vec256(rays.orig, lambertian_rays.orig, (__m256)lambertian_loc);
+    rays.dir = rays.dir.blend_vec256(lambertian_rays.dir, (__m256)lambertian_loc);
+    rays.orig = rays.orig.blend_vec256(lambertian_rays.orig, (__m256)lambertian_loc);
   }
   if (!_mm256_testz_si256(dielectric_loc, dielectric_loc)) {
     RayCluster dielectric_rays = {
@@ -166,8 +167,8 @@ LCGRand lcg_rand; // TODO move this someplace else? Why is it here? Is it thread
     };
     scatter_dielectric(dielectric_rays, hit_rec);
 
-    rays.dir = blend_vec256(rays.dir, dielectric_rays.dir, (__m256)dielectric_loc);
-    rays.orig = blend_vec256(rays.orig, dielectric_rays.orig, (__m256)dielectric_loc);
+    rays.dir = rays.dir.blend_vec256(dielectric_rays.dir, (__m256)dielectric_loc);
+    rays.orig = rays.orig.blend_vec256(dielectric_rays.orig, (__m256)dielectric_loc);
   }
 }
 

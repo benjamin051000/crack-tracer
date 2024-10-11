@@ -5,7 +5,7 @@ class LCGRand {
 public:
   [[nodiscard, gnu::always_inline]] inline Vec3_256 random_unit_vec() {
     Vec3_256 rand_vec = rand_vec_in_cube();
-    normalize(rand_vec);
+	rand_vec.normalize();
     return rand_vec;
   };
 

@@ -3,10 +3,21 @@
 #include <immintrin.h>
 #include "globals.hpp"
 
+namespace { // simply to remove the need for `static` on all these methods.
+
+[[nodiscard, gnu::always_inline]] inline __m256 abs_256(const __m256& vec) noexcept {
+  const __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
+  return _mm256_and_ps(vec, (__m256)sign_mask);
+}
+
+} // end of namespace (anonymous)
 template <typename DataType>
 struct _Vec3 {
   DataType x, y, z;
 };
+
+using Vec3 = _Vec3<float>;
+using CharColor = _Vec3<uint8_t>;
 
 // TODO Default template typenames don't work?? Maybe they actually do... :shrug: try it later
 struct Vec3_256 {
@@ -128,58 +139,36 @@ struct Vec3_256 {
   z = _mm256_and_ps(z, b);
   return *this;
 }
-};
 
-using Vec3 = _Vec3<float>;
-using CharColor = _Vec3<uint8_t>;
-
-
-namespace { // simply to remove the need for `static` on all these methods.
-
-
-
-
-
-[[nodiscard, gnu::always_inline]] inline __m256 dot(
-	const Vec3_256& a,
-	const Vec3_256& b
-) noexcept {
-  __m256 dot = _mm256_mul_ps(a.x, b.x);
-  dot = _mm256_fmadd_ps(a.y, b.y, dot);
-  return _mm256_fmadd_ps(a.z, b.z, dot);
+[[nodiscard, gnu::always_inline]] inline __m256 dot(const Vec3_256& b) const noexcept {
+  __m256 dot = _mm256_mul_ps(x, b.x);
+  dot = _mm256_fmadd_ps(y, b.y, dot);
+  return _mm256_fmadd_ps(z, b.z, dot);
 }
 
 // reflect a ray about the axis
 // v = v - 2*dot(v,n)*n;
-[[nodiscard, gnu::always_inline]] inline Vec3_256 reflect(
-	const Vec3_256& ray_dir,
-	const Vec3_256& axis
-) noexcept {
+[[nodiscard, gnu::always_inline]] inline Vec3_256 reflect(const Vec3_256& axis) const noexcept {
   constexpr __m256 reflect_scale = {2.f, 2.f, 2.f, 2.f, 2.f, 2.f, 2.f, 2.f};
-  return ray_dir - axis * dot(ray_dir, axis) * reflect_scale;
+  return *this - axis * dot(axis) * reflect_scale;
 }
 
-[[nodiscard, gnu::always_inline]] inline __m256 abs_256(const __m256& vec) noexcept {
-  const __m256i sign_mask = _mm256_srli_epi32((__m256i)global::all_set, 1);
-  return _mm256_and_ps(vec, (__m256)sign_mask);
-}
 
 [[nodiscard, gnu::always_inline]] inline Vec3_256 refract(
-	const Vec3_256& ray_dir,
 	const Vec3_256& norm,
 	const __m256& ratio
-) noexcept {
-  const Vec3_256 inverted_ray_dir = -ray_dir;
-  const __m256 cos_theta = _mm256_min_ps(dot(inverted_ray_dir, norm), global::ones);
+) const noexcept {
+  const Vec3_256 inverted_ray_dir = -(*this);
+  const __m256 cos_theta = _mm256_min_ps(inverted_ray_dir.dot(norm), global::ones);
 
   Vec3_256 r_out_perp {
-      _mm256_fmadd_ps(cos_theta, norm.x, ray_dir.x),
-      _mm256_fmadd_ps(cos_theta, norm.y, ray_dir.y),
-      _mm256_fmadd_ps(cos_theta, norm.z, ray_dir.z),
+      _mm256_fmadd_ps(cos_theta, norm.x, x),
+      _mm256_fmadd_ps(cos_theta, norm.y, y),
+      _mm256_fmadd_ps(cos_theta, norm.z, z),
   };
   r_out_perp *= ratio;
 
-  __m256 r_out_parallel_scale = global::ones - dot(r_out_perp, r_out_perp);
+  __m256 r_out_parallel_scale = global::ones - r_out_perp.dot(r_out_perp);
   r_out_parallel_scale = abs_256(r_out_parallel_scale);
 
   // square then negate
@@ -193,30 +182,29 @@ namespace { // simply to remove the need for `static` on all these methods.
   };
 }
 
-[[gnu::always_inline]] inline void normalize(Vec3_256& vec) noexcept {
-  const __m256 vec_len_2 = dot(vec, vec);
+[[gnu::always_inline]] inline void normalize() noexcept {
+  const __m256 vec_len_2 = dot(*this);
   const __m256 recip_len = _mm256_rsqrt_ps(vec_len_2);
-  vec *= recip_len;
+  *this *= recip_len;
 }
 
-[[nodiscard, gnu::always_inline]] inline Vec3_256 broadcast_vec(const Vec3* vec) noexcept {
-  return Vec3_256{
-      .x = _mm256_broadcast_ss(&vec->x),
-      .y = _mm256_broadcast_ss(&vec->y),
-      .z = _mm256_broadcast_ss(&vec->z),
+[[nodiscard, gnu::always_inline]] static inline Vec3_256 broadcast_vec(const Vec3& vec) noexcept {
+  return Vec3_256 {
+      _mm256_broadcast_ss(&vec.x),
+      _mm256_broadcast_ss(&vec.y),
+      _mm256_broadcast_ss(&vec.z),
   };
 }
 
 [[nodiscard, gnu::always_inline]] inline Vec3_256 blend_vec256(
-	const Vec3_256& a,
 	const Vec3_256& b,
-	const __m256 mask
-) noexcept {
-  return Vec3_256{
-      _mm256_blendv_ps(a.x, b.x, mask),
-      _mm256_blendv_ps(a.y, b.y, mask),
-      _mm256_blendv_ps(a.z, b.z, mask),
+	const __m256& mask
+) const noexcept {
+  return Vec3_256 {
+      _mm256_blendv_ps(x, b.x, mask),
+      _mm256_blendv_ps(y, b.y, mask),
+      _mm256_blendv_ps(z, b.z, mask),
   };
 }
 
-} // end of namespace (anonymous)
+}; // end of struct Vec3_256

@@ -5,6 +5,7 @@
 #include "materials.hpp"
 #include "sphere.hpp"
 #include "types.hpp"
+#include "vec.hpp"
 #include <SDL2/SDL.h>
 #include <array>
 #include <chrono>
@@ -161,7 +162,7 @@ namespace {
   constexpr Vec3_256 base_dirs = comptime::init_ray_directions();
   RayCluster base_rays = {
       .dir = base_dirs,
-      .orig = broadcast_vec(&cam_origin),
+      .orig = Vec3_256::broadcast_vec(cam_origin),
   };
 
   Color_256 sample_color;

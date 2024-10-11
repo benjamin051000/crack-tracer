@@ -2,6 +2,7 @@
 #include "materials.hpp"
 #include "rand.hpp"
 #include "types.hpp"
+#include "vec.hpp"
 #include <cstdlib>
 #include <cwctype>
 #include <immintrin.h>
@@ -75,14 +76,14 @@ inline __m256 sphere_hit(
 	const float t_max
 ) noexcept {
 
-  Vec3_256 sphere_center = broadcast_vec(&sphere.center);
+  Vec3_256 sphere_center = Vec3_256::broadcast_vec(sphere.center);
   Vec3_256 oc = sphere_center - rays.orig;
   float rad_2 = sphere.r * sphere.r;
   __m256 rad_2_vec = _mm256_broadcast_ss(&rad_2);
 
-  __m256 a = dot(rays.dir, rays.dir);
-  __m256 b = dot(rays.dir, oc);
-  __m256 c = dot(oc, oc) - rad_2_vec;
+  __m256 a = rays.dir.dot(rays.dir);
+  __m256 b = rays.dir.dot(oc);
+  __m256 c = oc.dot(oc) - rad_2_vec;
 
   __m256 discrim = _mm256_fmsub_ps(b, b, a * c);
 
@@ -128,10 +129,10 @@ inline void set_face_normal(
 	HitRecords& hit_rec, 
 	const Vec3_256& outward_norm
 ) noexcept {
-  const __m256 ray_norm_dot = dot(rays.dir, outward_norm);
+  const __m256 ray_norm_dot = rays.dir.dot(outward_norm);
   hit_rec.front_face = _mm256_cmp_ps(ray_norm_dot, _mm256_setzero_ps(), _CMP_LT_OS);
   hit_rec.norm = -outward_norm;
-  hit_rec.norm = blend_vec256(hit_rec.norm, outward_norm, hit_rec.front_face);
+  hit_rec.norm = hit_rec.norm.blend_vec256(outward_norm, hit_rec.front_face);
 }
 
 [[gnu::always_inline]] inline void create_hit_record(
@@ -166,10 +167,9 @@ inline void set_face_normal(
   }
 
   SphereCluster new_spheres = {
-      .center = broadcast_vec(&curr_sphere.center),
-      .mat =
-          {
-              .atten = broadcast_vec(&curr_sphere.mat.atten),
+      .center = Vec3_256::broadcast_vec(curr_sphere.center),
+      .mat = {
+              .atten = Vec3_256::broadcast_vec(curr_sphere.mat.atten),
               .type = _mm256_set1_epi32(curr_sphere.mat.type),
           },
       .r = _mm256_broadcast_ss(&curr_sphere.r),
