@@ -1,7 +1,7 @@
 #pragma once
-#include <immintrin.h>
 #include "colors.hpp"
 #include "vec.hpp"
+#include <immintrin.h>
 
 // TODO move out of here
 struct Material_256 {

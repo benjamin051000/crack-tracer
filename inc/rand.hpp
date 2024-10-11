@@ -5,7 +5,7 @@ class LCGRand {
 public:
   [[nodiscard, gnu::always_inline]] inline Vec3_256 random_unit_vec() {
     Vec3_256 rand_vec = rand_vec_in_cube();
-	rand_vec.normalize();
+    rand_vec.normalize();
     return rand_vec;
   };
 
@@ -40,7 +40,7 @@ private:
     constexpr float min = -1.0;
     constexpr float max = 1.0;
 
-    return Vec3_256 {
+    return Vec3_256{
         rand_in_range_256(min, max),
         rand_in_range_256(min, max),
         rand_in_range_256(min, max),
@@ -55,5 +55,7 @@ private:
   };
 
   // scalar versions of rand generation
-  [[nodiscard, gnu::always_inline]] inline int lcg_rand() { return rseed = (rseed * 1103515245u + 12345u) & RAND_MAX; }
+  [[nodiscard, gnu::always_inline]] inline int lcg_rand() {
+    return rseed = (rseed * 1103515245u + 12345u) & RAND_MAX;
+  }
 };

@@ -1,8 +1,8 @@
 #pragma once
-#include <array>
-#include <cstdint>
 #include "globals.hpp"
 #include "vec.hpp"
+#include <array>
+#include <cstdint>
 
 namespace comptime {
   // gets us the first pixels row of sample directions during compile time.
@@ -17,14 +17,15 @@ namespace comptime {
         .z = global::cam_origin[2] - global::focal_len,
     };
 
-	alignas(32) std::array<float, 8> x_arr;
+    alignas(32) std::array<float, 8> x_arr;
     x_arr[0] = top_left.x;
     for (size_t i = 1; i < 8; ++i) {
       x_arr[i] = x_arr[i - 1] + global::sample_du;
     }
 
     Vec3_256 init_dirs = {
-        .x = {x_arr[0], x_arr[1], x_arr[2], x_arr[3], x_arr[4], x_arr[5], x_arr[6], x_arr[7]}, // TODO better way to import this data?
+        .x = {x_arr[0], x_arr[1], x_arr[2], x_arr[3], x_arr[4], x_arr[5], x_arr[6],
+              x_arr[7]}, // TODO better way to import this data?
         .y = {top_left.y, top_left.y, top_left.y, top_left.y, top_left.y, top_left.y, top_left.y,
               top_left.y},
         .z = {top_left.z, top_left.z, top_left.z, top_left.z, top_left.z, top_left.z, top_left.z,
@@ -35,7 +36,7 @@ namespace comptime {
   }
 
   consteval __m256i init_rseed_arr() {
-	std::array<uint32_t, 8> rseed_arr;
+    std::array<uint32_t, 8> rseed_arr;
     rseed_arr[0] = 0;
     for (size_t i = 1; i < 8; i++) {
       rseed_arr[i] = (rseed_arr[i - 1] * 11035152453u + 12345u) & RAND_MAX;

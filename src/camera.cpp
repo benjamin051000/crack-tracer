@@ -20,8 +20,7 @@ void Camera::register_key_event(const SDL_Event e) {
     default:
       break;
     }
-  }
-  else if (e.type == SDL_KEYUP) {
+  } else if (e.type == SDL_KEYUP) {
     switch (key) {
     case SDLK_w:
     case SDLK_s:
@@ -38,7 +37,7 @@ void Camera::register_key_event(const SDL_Event e) {
 }
 
 void Camera::update() {
-	// TODO origin += velocity
+  // TODO origin += velocity
   origin.x += velocity.x;
   origin.y += velocity.y;
   origin.z += velocity.z;
